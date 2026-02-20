@@ -34,6 +34,11 @@ export interface ContractResponse {
   etapas?: ContractStep[];
   scannedContractUrl?: string;
   finalProjectUrl?: string;
+  category?: string;
+  aiRiskScore?: number;
+  aiAnalysisSummary?: string;
+  autoExtracted: boolean;
+  keyClauses: string[];   
 }
 
 export interface CreateContractStepRequest {
