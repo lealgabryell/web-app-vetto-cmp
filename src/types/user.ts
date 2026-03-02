@@ -20,3 +20,23 @@ export interface Address {
     state: string;
     zipCode: string;
 }
+
+export interface UserResponse {
+  id: string;
+  name: string;
+  email: string;
+  cpf: string;
+  phone: string;
+  address: Address | null;
+  birthDate: string; // ISO string
+  role: 'ADMIN' | 'CLIENT';
+}
+
+export interface UpdateUserRequest {
+  name?: string;
+  cpf?: string;
+  birthDate?: string;
+  email?: string;
+  phone?: string;
+  address?: Address;
+}

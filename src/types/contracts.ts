@@ -29,6 +29,7 @@ export interface ContractResponse {
   startDate: string;
   endDate: string;
   clientId: string;
+  adminId: string;
   clientName: string;
   clientEmail: string;
   etapas?: ContractStep[];
@@ -75,6 +76,7 @@ export interface CreateContractRequest {
   startDate: string;
   endDate: string;
   clientId?: string;
+  adminId?: string;
 }
 
 export interface NewContractModalProps {
