@@ -68,7 +68,7 @@ export default function NewStepForm({ onSave, onCancel, isLoading }: NewStepForm
               className="w-full text-gray-500 mt-1 p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
               value={formData.responsible}
               onChange={e => setFormData({...formData, responsible: e.target.value})}
-              placeholder="Nome do arquiteto"
+              placeholder="Nome do responsável"
             />
           </div>
         </div>

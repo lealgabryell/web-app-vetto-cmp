@@ -66,12 +66,6 @@ export const VettoAnalysisModal = ({
             </div>
 
             <div className="flex items-center gap-6">
-              {/* O GATILHO DO VETTO */}
-              <VettoTrigger
-                contract={contract}
-                onClick={() => setIsVettoOpen(true)}
-              />
-
               <button
                 onClick={onClose}
                 className="text-slate-400 hover:text-slate-600 p-2"

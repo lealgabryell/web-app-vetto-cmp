@@ -1,6 +1,20 @@
 @import "tailwindcss";
 @import "shadcn/tailwind.css";
 
+@layer base {
+  button,
+  a,
+  [role="button"],
+  select,
+  label[for],
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="submit"],
+  input[type="reset"] {
+    cursor: pointer;
+  }
+}
+
 /* Base para todos os indicadores */
 .status-indicator {
   position: relative;

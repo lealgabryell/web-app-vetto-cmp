@@ -39,7 +39,7 @@ export const ContractFileUpload: React.FC<UploadSectionProps> = ({ contractId, o
     <div className="flex flex-col bg-white ">
       <h3 className="text-lg font-semibold text-slate-800">Documentação do Contrato</h3>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3">
         {/* Botão 1: Contrato Escaneado */}
         <div className="relative">
           <input
@@ -56,27 +56,7 @@ export const ContractFileUpload: React.FC<UploadSectionProps> = ({ contractId, o
               ${loading === 'SCANNED' ? 'bg-slate-50 border-slate-300' : 'border-blue-200 hover:border-blue-500 hover:bg-blue-50'}`}
           >
             {loading === 'SCANNED' ? <Loader2 className="animate-spin" /> : <FileUp size={20} />}
-            <span className="font-medium text-slate-700">Upload Contrato Assinado</span>
-          </label>
-        </div>
-
-        {/* Botão 2: Projeto Final */}
-        <div className="relative">
-          <input
-            type="file"
-            id="final-upload"
-            className="hidden"
-            accept=".pdf"
-            onChange={(e) => handleUpload(e, 'FINAL')}
-            disabled={!!loading}
-          />
-          <label
-            htmlFor="final-upload"
-            className={`flex items-center justify-center gap-2 px-4 py-3 rounded-md border-2 border-dashed cursor-pointer transition-all
-              ${loading === 'FINAL' ? 'bg-slate-50 border-slate-300' : 'border-emerald-200 hover:border-emerald-500 hover:bg-emerald-50'}`}
-          >
-            {loading === 'FINAL' ? <Loader2 className="animate-spin" /> : <FileCheck size={20} />}
-            <span className="font-medium text-slate-700">Upload Projeto Final</span>
+            <span className="font-medium text-slate-700">Upload Contrato Para Análise do Vetto</span>
           </label>
         </div>
       </div>

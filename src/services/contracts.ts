@@ -7,18 +7,11 @@ import {
   CreateContractStepRequest,
   UpdateContractRequest,
   UpdateContractStepRequest,
+  UpdatedContractResponse,
 } from "../types/contracts";
-import Cookie from "js-cookie";
 
 export const getContracts = async (): Promise<ContractResponse[]> => {
-  const token = Cookie.get("user_token");
-
-  const { data } = await api.get<ContractResponse[]>("/api/contracts", {
-    headers: {
-      // Aqui enviamos o token exatamente como o cURL do Swagger exige
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const { data } = await api.get<ContractResponse[]>("/api/contracts");
   return data;
 };
 
@@ -67,9 +60,8 @@ export const createContract = async (contractData: CreateContractRequest) => {
 export const updateStepData = async (
   contractId: string,
   stepId: string,
-  step: ContractStep, // Recebemos o objeto do front
+  step: ContractStep,
 ): Promise<ContractStep> => {
-  // Mapeamos para o formato que o Spring Boot espera (DTO)
   const payload: UpdateContractStepRequest = {
     titulo: step.title,
     responsavel: step.responsible,
@@ -77,7 +69,8 @@ export const updateStepData = async (
     previsaoConclusao: step.expectedEndDate,
   };
 
-  const { data } = await api.put<ContractStep>(
+  // README: PATCH /api/contracts/{id}/steps/{stepId}
+  const { data } = await api.patch<ContractStep>(
     `/api/contracts/${contractId}/steps/${stepId}`,
     payload,
   );
@@ -88,8 +81,9 @@ export const updateStepData = async (
 export const updateContract = async (
   contractId: string,
   contractData: UpdateContractRequest,
-): Promise<ContractResponse> => {
-  const { data } = await api.put<ContractResponse>(
+): Promise<UpdatedContractResponse> => {
+  // README: PATCH /api/contracts/{id}
+  const { data } = await api.patch<UpdatedContractResponse>(
     `/api/contracts/${contractId}`,
     contractData,
   );
@@ -103,17 +97,32 @@ export const uploadContractPDF = async (
 ): Promise<ContractResponse> => {
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("type", type);
 
-  const response = await api.post(
-    `/api/contracts/${contractId}/upload-pdf`,
+  // README: POST /api/contracts/{id}/upload?type=SCANNED|FINAL
+  const response = await api.post<ContractResponse>(
+    `/api/contracts/${contractId}/upload?type=${type}`,
     formData,
   );
-  return response.data; 
+  return response.data;
 };
 
 
 export const getContractHistory = async (contractId: string): Promise<ContractHistoryResponse[]> => {
   const response = await api.get<ContractHistoryResponse[]>(`/api/contracts/${contractId}/history`);
+  return response.data;
+};
+
+export const uploadStepPDF = async (
+  contractId: string,
+  stepId: string,
+  file: File,
+): Promise<string> => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await api.post<string>(
+    `/api/contracts/${contractId}/steps/${stepId}/pdf`,
+    formData,
+  );
   return response.data;
 };
