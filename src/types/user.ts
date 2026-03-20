@@ -39,3 +39,28 @@ export interface Address {
     state: string;
     zipCode: string;
 }
+
+export interface FinancialDetailsRequest {
+  bankCode?: string;
+  bankName?: string;
+  agency?: string;
+  agencyDigit?: string;
+  accountNumber?: string;
+  accountVerificationDigit?: string;
+  accountType?: AccountType;
+  ownerDocument?: string;
+  ownerName?: string;
+  pixKey?: string;
+}
+
+export interface UpdateUserRequest {
+  name?: string;
+  cpf?: string;
+  /** ISO date YYYY-MM-DD */
+  birthDate?: string;
+  email?: string;
+  phone?: string;
+  address?: Address;
+  financialDetails?: FinancialDetailsRequest;
+  director?: boolean;
+}

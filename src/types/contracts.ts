@@ -11,25 +11,27 @@ export type EtapaStatus =
   | "CONCLUIDA"
   | "CANCELADA";
 
-export interface ContractStep {
+/** Compact user representation returned inside step responses */
+export interface UserSummary {
   id: string;
-  title: string;
-  startDate: string;
-  expectedEndDate: string;
-  status: EtapaStatus;
-  responsible: string;
-  pdfUrls?: string[];
+  name: string;
+  email: string;
 }
 
+/** Full DTO returned by every step endpoint (GET / POST / PUT) */
 export interface ContractStepResponse {
   id: string;
-  title: string;
-  startDate: string;
-  expectedEndDate: string;
+  titulo: string;
+  dataInicio: string;           // "YYYY-MM-DD"
+  previsaoConclusao: string;    // "YYYY-MM-DD"
   status: EtapaStatus;
-  responsible: string;
+  responsaveis: UserSummary[];  // may be []
+  aprovadores: UserSummary[];   // may be []
   pdfUrls: string[];
 }
+
+/** @deprecated — use ContractStepResponse */
+export type ContractStep = ContractStepResponse;
 
 export interface ContractAdminRequest {
   adminId: string;
@@ -67,12 +69,14 @@ export interface ContractResponse {
   steps: ContractStepResponse[];
 }
 
+/** POST /api/contracts/:contractId/steps */
 export interface CreateContractStepRequest {
-  title: string;
-  startDate: string; // ISO date YYYY-MM-DD
-  expectedEndDate: string; // ISO date YYYY-MM-DD
+  titulo: string;              // obrigatório
+  dataInicio: string;          // "YYYY-MM-DD"
+  expectedEndDate: string;     // "YYYY-MM-DD"
   status: EtapaStatus;
-  responsible: string;
+  responsavelIds?: string[];   // UUIDs — opcional
+  aprovadorIds?: string[];     // UUIDs — opcional
 }
 
 export interface Address {
@@ -132,11 +136,14 @@ export interface NewContractModalProps {
   existingCategories?: string[];
 }
 
+/** PUT /api/contracts/:contractId/steps/:stepId */
 export interface UpdateContractStepRequest {
-  titulo: string;
-  responsavel: string;
-  dataInicio: string; // YYYY-MM-DD
-  previsaoConclusao: string; // YYYY-MM-DD
+  titulo: string;                   // obrigatório
+  dataInicio: string;               // "YYYY-MM-DD"
+  previsaoConclusao: string;        // "YYYY-MM-DD"
+  responsavelIds?: string[];        // substitui lista inteira
+  aprovadorIds?: string[];          // substitui lista inteira
+  pdfUrls?: string[];
 }
 
 export interface ContractHistoryResponse {

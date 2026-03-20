@@ -12,15 +12,16 @@ import {
   updateStepStatus,
   uploadStepPDF,
 } from "../../../services/contracts";
-import { getAdmins, getUserById } from "../../../services/users";
-import { User } from "../../../types/user";
+import { getAdmins, getUserById, updateUser, patchFinancialDetails } from "../../../services/users";
+import { User, FinancialDetailsRequest, AccountType, UpdateUserRequest } from "../../../types/user";
 import {
   ContractHistoryResponse,
   ContractResponse,
-  ContractStep,
+  ContractStepResponse,
   CreateContractStepRequest,
   EtapaStatus,
   UpdateContractRequest,
+  UpdateContractStepRequest,
   UpdatedContractResponse,
 } from "../../../types/contracts";
 import toast from "react-hot-toast";
@@ -44,7 +45,7 @@ export default function AdminDashboard() {
     useState<ContractResponse | null>(null);
   const [showSteps, setShowSteps] = useState(false);
   const [isNewStepModalOpen, setIsNewStepModalOpen] = useState(false);
-  const [currentSteps, setCurrentSteps] = useState<ContractStep[]>([]);
+  const [currentSteps, setCurrentSteps] = useState<ContractStepResponse[]>([]);
   const [, setLoadingSteps] = useState(false);
   const [stepSearch, setStepSearch] = useState("");
   const [stepStatusFilter, setStepStatusFilter] = useState<"ALL" | EtapaStatus>(
@@ -53,16 +54,22 @@ export default function AdminDashboard() {
   const [contractSearch, setContractSearch] = useState("");
   const [contractStatusFilter, setContractStatusFilter] = useState("ALL");
   const [isNewContractModalOpen, setIsNewContractModalOpen] = useState(false);
-  const [editingStep, setEditingStep] = useState<ContractStep | null>(null);
+  const [editingStep, setEditingStep] = useState<ContractStepResponse | null>(null);
   const [isEditContractModalOpen, setIsEditContractModalOpen] = useState(false);
   const [, setHistory] = useState<ContractHistoryResponse[]>([]);
   const [, setLoadingHistory] = useState(false);
   const [isVettoModalOpen, setIsVettoModalOpen] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [loggedUserId, setLoggedUserId] = useState("");
+  const [isLoggedUserDirector, setIsLoggedUserDirector] = useState(false);
   const [clientDetailsUser, setClientDetailsUser] = useState<User | null>(null);
   const [clientDetailsOpen, setClientDetailsOpen] = useState(false);
   const [loadingClientDetails, setLoadingClientDetails] = useState(false);
+  const [financialEditOpen, setFinancialEditOpen] = useState(false);
+  const [financialFormData, setFinancialFormData] = useState<FinancialDetailsRequest>({});
+  const [savingFinancial, setSavingFinancial] = useState(false);
+  const [canEditFinancial, setCanEditFinancial] = useState(false);
 
   const canViewContractDetails = (contract: ContractResponse): boolean => {
     if (!loggedUserId) return false;
@@ -70,18 +77,61 @@ export default function AdminDashboard() {
     return entry?.canViewDetails ?? false;
   };
 
-  const handleOpenClientDetails = async (clientId: string) => {
+  const handleOpenClientDetails = async (clientId: string, contract?: ContractResponse) => {
     setClientDetailsOpen(true);
     setClientDetailsUser(null);
     setLoadingClientDetails(true);
+    setFinancialEditOpen(false);
+    setFinancialFormData({});
+    // Permissão: diretor ou LEADER do contrato de origem
+    const isLeader = contract ? canViewContractDetails(contract) : false;
+    setCanEditFinancial(isLoggedUserDirector || isLeader);
     try {
       const user = await getUserById(clientId);
       setClientDetailsUser(user);
+      setFinancialFormData(user.financialDetails ?? {});
     } catch {
       toast.error("Erro ao carregar dados do cliente.");
       setClientDetailsOpen(false);
     } finally {
       setLoadingClientDetails(false);
+    }
+  };
+
+  const handleSaveFinancialDetails = async () => {
+    if (!clientDetailsUser) return;
+    setSavingFinancial(true);
+    try {
+      let updatedUser: User;
+      if (clientDetailsUser.financialDetails?.id) {
+        // Edição: PATCH no registro existente — não cria nova instância
+        const patchedDetails = await patchFinancialDetails(
+          clientDetailsUser.financialDetails.id,
+          financialFormData,
+        );
+        updatedUser = { ...clientDetailsUser, financialDetails: patchedDetails };
+      } else {
+        // Criação: PUT no usuário passando financialDetails para o backend criar
+        const req: UpdateUserRequest = {
+          name: clientDetailsUser.name,
+          cpf: clientDetailsUser.cpf,
+          birthDate: clientDetailsUser.birthdate,
+          email: clientDetailsUser.email,
+          phone: clientDetailsUser.phone,
+          address: clientDetailsUser.address,
+          director: clientDetailsUser.director,
+          financialDetails: financialFormData,
+        };
+        updatedUser = await updateUser(clientDetailsUser.id, req);
+      }
+      setClientDetailsUser(updatedUser);
+      setFinancialFormData(updatedUser.financialDetails ?? {});
+      setFinancialEditOpen(false);
+      toast.success("Dados financeiros atualizados com sucesso!");
+    } catch {
+      toast.error("Erro ao salvar dados financeiros.");
+    } finally {
+      setSavingFinancial(false);
     }
   };
 
@@ -108,8 +158,9 @@ export default function AdminDashboard() {
           (u) => u.id === jwtIdentifier || u.email === jwtIdentifier,
         );
         setLoggedUserId(loggedAdmin?.id ?? jwtIdentifier);
+        setIsLoggedUserDirector(loggedAdmin?.director ?? false);
       } catch (e: unknown) {
-        toast.error("Erro ao carregar contratos: " + e);
+        toast.error("Erro ao carregar contratos: Faça login novamente!");
       } finally {
         setLoading(false);
       }
@@ -125,8 +176,20 @@ export default function AdminDashboard() {
     }
   }, [selectedContract]);
 
+  useEffect(() => {
+    const anyOpen =
+      !!selectedContract ||
+      isNewContractModalOpen ||
+      isEditContractModalOpen ||
+      isVettoModalOpen ||
+      clientDetailsOpen ||
+      !!editingStep;
+    document.body.style.overflow = anyOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [selectedContract, isNewContractModalOpen, isEditContractModalOpen, isVettoModalOpen, clientDetailsOpen, editingStep]);
+
   const filteredSteps = currentSteps.filter((etapa) => {
-    const matchesSearch = etapa.title
+    const matchesSearch = etapa.titulo
       .toLowerCase()
       .includes(stepSearch.toLowerCase());
     const matchesStatus =
@@ -212,24 +275,20 @@ export default function AdminDashboard() {
 
     try {
       setLoading(true);
-      // Chamada para a API: POST /api/contracts/{id}/steps
       const newStep = await createStep(selectedContract.id, stepData);
 
       toast.success("Etapa adicionada!");
 
-      // Atualiza os estados locais para refletir a nova etapa sem refresh
       const updatedEtapas = [...(currentSteps || []), newStep];
-
       setCurrentSteps(updatedEtapas);
 
       const updatedContract = { ...selectedContract, etapas: updatedEtapas };
-
       setSelectedContract(updatedContract);
       setContracts((prev) =>
         prev.map((c) => (c.id === selectedContract.id ? updatedContract : c)),
       );
 
-      setIsNewStepModalOpen(false); // Fecha o modal de formulário
+      setIsNewStepModalOpen(false);
     } catch (error: unknown) {
       toast.error("Erro ao criar etapa: " + error);
     } finally {
@@ -249,35 +308,32 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleSaveEditedStep = async (updatedStep: ContractStep) => {
-    if (!selectedContract) return;
+  const handleSaveEditedStep = async (payload: UpdateContractStepRequest) => {
+    if (!selectedContract || !editingStep) return;
 
     try {
-      // 1. Chama API
       const result = await updateStepData(
         selectedContract.id,
-        updatedStep.id,
-        updatedStep,
+        editingStep.id,
+        payload,
       );
 
-      console.log("Resultado da atualização da etapa:", result);
       toast.success("Etapa atualizada com sucesso!");
 
       const newStepsList = currentSteps.map((s) =>
-        s.id === updatedStep.id ? updatedStep : s,
+        s.id === editingStep.id ? result : s,
       );
       setCurrentSteps(newStepsList);
+      setEditingStep(null);
 
-      // 3. Atualiza o objeto de Contrato Global
       const updatedContract = { ...selectedContract, etapas: newStepsList };
       setSelectedContract(updatedContract);
-
       setContracts((prev) =>
         prev.map((c) => (c.id === selectedContract.id ? updatedContract : c)),
       );
     } catch (error: unknown) {
-      toast.error("Erro ao atualizar etapa: " + error);
-      throw error; // Relança para o modal saber que deu erro e não fechar se quiser tratar
+      toast.error("Erro ao atualizar etapa");
+      throw error;
     }
   };
 
@@ -292,7 +348,7 @@ export default function AdminDashboard() {
         ),
       );
     } catch (error: unknown) {
-      toast.error("Erro ao anexar PDF: " + error);
+      toast.error("Erro ao anexar PDF");
     }
   };
 
@@ -337,7 +393,7 @@ export default function AdminDashboard() {
 
       setIsEditContractModalOpen(false);
     } catch (error: unknown) {
-      toast.error("Erro ao atualizar contrato: " + error);
+      toast.error("Erro ao atualizar contrato");
       throw error;
     }
   };
@@ -382,7 +438,7 @@ export default function AdminDashboard() {
       const data = await getContractSteps(contractId);
       setCurrentSteps(data);
     } catch (error: unknown) {
-      toast.error("Erro ao carregar etapas do banco: " + error);
+      toast.error("Erro ao carregar etapas do banco");
     } finally {
       setLoadingSteps(false);
     }
@@ -394,7 +450,7 @@ export default function AdminDashboard() {
       const data = await getContractHistory(contractId);
       setHistory(data);
     } catch (error) {
-      console.error("Erro ao carregar histórico:", error);
+      toast.error("Erro ao carregar histórico");
     } finally {
       setLoadingHistory(false);
     }
@@ -445,7 +501,7 @@ export default function AdminDashboard() {
         </div>
         <button
           onClick={() => setIsNewContractModalOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-normal py-2 px-4 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center gap-2"
+          className="bg-blue-600 hover:bg-blue-700 text-white font-normal py-1.5 px-3 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center gap-2"
         >
           <span className="text-xl">+</span> Novo Contrato
         </button>
@@ -460,7 +516,7 @@ export default function AdminDashboard() {
             </div>
             <input
               type="text"
-              placeholder="Buscar por projeto ou cliente..."
+              placeholder="Buscar por contrato ou cliente..."
               className="w-full text-black pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-white shadow-sm text-sm"
               value={contractSearch}
               onChange={(e) => setContractSearch(e.target.value)}
@@ -577,7 +633,7 @@ export default function AdminDashboard() {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleOpenClientDetails(contract.clientId);
+                            handleOpenClientDetails(contract.clientId, contract);
                           }}
                           className="text-[11px] text-blue-500 hover:text-blue-700 hover:underline truncate mt-0.5 block text-left"
                         >
@@ -677,7 +733,7 @@ export default function AdminDashboard() {
                         <p className="text-xs text-slate-400 mb-1">Cliente</p>
                         <button
                           type="button"
-                          onClick={() => handleOpenClientDetails(selectedContract.clientId)}
+                          onClick={() => handleOpenClientDetails(selectedContract.clientId, selectedContract)}
                           className="font-bold text-blue-600 hover:text-blue-800 hover:underline text-sm text-left block"
                         >
                           {selectedContract.clientName}
@@ -709,12 +765,35 @@ export default function AdminDashboard() {
                         Gerenciar Etapas
                       </button>
                       <button
-                        onClick={handleCancel}
+                        onClick={() => setShowCancelConfirm(true)}
                         className="px-6 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl"
                       >
                         Cancelar Contrato
                       </button>
                     </div>
+
+                    {/* Confirmação de cancelamento */}
+                    {showCancelConfirm && (
+                      <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl flex flex-col gap-3">
+                        <p className="text-sm font-semibold text-red-700">
+                          Tem certeza que deseja cancelar esse contrato?
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={async () => { await handleCancel(); setShowCancelConfirm(false); }}
+                            className="flex-1 py-2 text-xs font-bold bg-red-600 hover:bg-red-700 text-white rounded-lg transition"
+                          >
+                            Sim, cancelar
+                          </button>
+                          <button
+                            onClick={() => setShowCancelConfirm(false)}
+                            className="flex-1 py-2 text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg transition"
+                          >
+                            Não, voltar
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   /* VISÃO RESUMIDA: MEMBER */
@@ -741,7 +820,7 @@ export default function AdminDashboard() {
                         <p className="text-xs text-slate-400 mb-1">Cliente</p>
                         <button
                           type="button"
-                          onClick={() => handleOpenClientDetails(selectedContract.clientId)}
+                          onClick={() => handleOpenClientDetails(selectedContract.clientId, selectedContract)}
                           className="font-bold text-blue-600 hover:text-blue-800 hover:underline text-sm text-left block"
                         >
                           {selectedContract.clientName}
@@ -880,6 +959,7 @@ export default function AdminDashboard() {
                 onClick={() => {
                   setSelectedContract(null);
                   setShowSteps(false);
+                  setShowCancelConfirm(false);
                 }}
                 className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
               >
@@ -964,53 +1044,168 @@ export default function AdminDashboard() {
             </div>
             {loadingClientDetails ? (
               <p className="text-sm text-slate-400 text-center py-6">Carregando...</p>
-            ) : clientDetailsUser?.financialDetails ? (
-              <div className="space-y-3 text-sm">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold">Banco</p>
-                    <p className="font-medium text-slate-700">
-                      {clientDetailsUser.financialDetails.bankName}
-                    </p>
+            ) : (
+              <>
+                {clientDetailsUser?.financialDetails ? (
+                  <div className="space-y-3 text-sm">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase font-bold">Banco</p>
+                        <p className="font-medium text-slate-700">
+                          {clientDetailsUser.financialDetails.bankName}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase font-bold">Tipo</p>
+                        <p className="font-medium text-slate-700">
+                          {clientDetailsUser.financialDetails.accountType}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase font-bold">Agência</p>
+                        <p className="font-mono font-medium text-slate-700">
+                          {clientDetailsUser.financialDetails.agency}
+                          {clientDetailsUser.financialDetails.agencyDigit
+                            ? `-${clientDetailsUser.financialDetails.agencyDigit}`
+                            : ""}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase font-bold">Conta</p>
+                        <p className="font-mono font-medium text-slate-700">
+                          {clientDetailsUser.financialDetails.accountNumber}-
+                          {clientDetailsUser.financialDetails.accountVerificationDigit}
+                        </p>
+                      </div>
+                    </div>
+                    {clientDetailsUser.financialDetails.pixKey && (
+                      <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+                        <p className="text-[10px] text-slate-400 uppercase font-bold mb-1">
+                          Chave PIX
+                        </p>
+                        <p className="font-mono text-sm text-slate-700 break-all">
+                          {clientDetailsUser.financialDetails.pixKey}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold">Tipo</p>
-                    <p className="font-medium text-slate-700">
-                      {clientDetailsUser.financialDetails.accountType}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold">Agência</p>
-                    <p className="font-mono font-medium text-slate-700">
-                      {clientDetailsUser.financialDetails.agency}
-                      {clientDetailsUser.financialDetails.agencyDigit
-                        ? `-${clientDetailsUser.financialDetails.agencyDigit}`
-                        : ""}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold">Conta</p>
-                    <p className="font-mono font-medium text-slate-700">
-                      {clientDetailsUser.financialDetails.accountNumber}-
-                      {clientDetailsUser.financialDetails.accountVerificationDigit}
-                    </p>
-                  </div>
-                </div>
-                {clientDetailsUser.financialDetails.pixKey && (
-                  <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
-                    <p className="text-[10px] text-slate-400 uppercase font-bold mb-1">
-                      Chave PIX
-                    </p>
-                    <p className="font-mono text-sm text-slate-700 break-all">
-                      {clientDetailsUser.financialDetails.pixKey}
-                    </p>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-slate-400 text-sm">Nenhum dado financeiro cadastrado.</p>
                   </div>
                 )}
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <p className="text-slate-400 text-sm">Nenhum dado financeiro cadastrado.</p>
-              </div>
+
+                {!financialEditOpen && canEditFinancial && (
+                  <button
+                    type="button"
+                    onClick={() => setFinancialEditOpen(true)}
+                    className="mt-4 w-full py-2 text-xs font-semibold border border-blue-200 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                  >
+                    {clientDetailsUser?.financialDetails ? "✏️ Editar dados financeiros" : "➕ Adicionar dados financeiros"}
+                  </button>
+                )}
+
+                {financialEditOpen && (
+                  <div className="mt-4 border-t pt-4">
+                    <h4 className="text-xs font-bold text-slate-700 mb-3">
+                      {clientDetailsUser?.financialDetails ? "Editar dados financeiros" : "Adicionar dados financeiros"}
+                    </h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        placeholder="Cód. Banco"
+                        className="p-2 text-xs border rounded text-zinc-700"
+                        value={financialFormData.bankCode ?? ""}
+                        maxLength={4}
+                        onChange={(e) => setFinancialFormData((p) => ({ ...p, bankCode: e.target.value.replace(/\D/g, "").slice(0, 4) }))}
+                      />
+                      <input
+                        placeholder="Nome do Banco"
+                        className="p-2 text-xs border rounded text-zinc-700"
+                        value={financialFormData.bankName ?? ""}
+                        maxLength={60}
+                        onChange={(e) => setFinancialFormData((p) => ({ ...p, bankName: e.target.value.replace(/[<>"'`]/g, "").slice(0, 60) }))}
+                      />
+                      <input
+                        placeholder="Agência"
+                        className="p-2 text-xs border rounded text-zinc-700"
+                        value={financialFormData.agency ?? ""}
+                        maxLength={5}
+                        onChange={(e) => setFinancialFormData((p) => ({ ...p, agency: e.target.value.replace(/\D/g, "").slice(0, 5) }))}
+                      />
+                      <input
+                        placeholder="Dígito Agência"
+                        className="p-2 text-xs border rounded text-zinc-700"
+                        value={financialFormData.agencyDigit ?? ""}
+                        maxLength={1}
+                        onChange={(e) => setFinancialFormData((p) => ({ ...p, agencyDigit: e.target.value.replace(/[^0-9Xx]/g, "").toUpperCase().slice(0, 1) }))}
+                      />
+                      <input
+                        placeholder="Nº da Conta"
+                        className="p-2 text-xs border rounded text-zinc-700"
+                        value={financialFormData.accountNumber ?? ""}
+                        maxLength={9}
+                        onChange={(e) => setFinancialFormData((p) => ({ ...p, accountNumber: e.target.value.replace(/\D/g, "").slice(0, 9) }))}
+                      />
+                      <input
+                        placeholder="Dígito Conta"
+                        className="p-2 text-xs border rounded text-zinc-700"
+                        value={financialFormData.accountVerificationDigit ?? ""}
+                        maxLength={1}
+                        onChange={(e) => setFinancialFormData((p) => ({ ...p, accountVerificationDigit: e.target.value.replace(/[^0-9Xx]/g, "").toUpperCase().slice(0, 1) }))}
+                      />
+                      <select
+                        className="col-span-2 p-2 text-xs border rounded bg-white text-zinc-700"
+                        value={financialFormData.accountType ?? ""}
+                        onChange={(e) => setFinancialFormData((p) => ({ ...p, accountType: e.target.value as AccountType }))}
+                      >
+                        <option value="">Tipo de conta</option>
+                        <option value="CORRENTE">Corrente</option>
+                        <option value="POUPANCA">Poupança</option>
+                        <option value="SALARIO">Salário</option>
+                        <option value="PAGAMENTO">Pagamento</option>
+                      </select>
+                      <input
+                        placeholder="Titular"
+                        className="col-span-2 p-2 text-xs border rounded text-zinc-700"
+                        value={financialFormData.ownerName ?? ""}
+                        maxLength={100}
+                        onChange={(e) => setFinancialFormData((p) => ({ ...p, ownerName: e.target.value.replace(/[<>"'`]/g, "").slice(0, 100) }))}
+                      />
+                      <input
+                        placeholder="CPF / CNPJ do Titular"
+                        className="col-span-2 p-2 text-xs border rounded text-zinc-700"
+                        value={financialFormData.ownerDocument ?? ""}
+                        maxLength={14}
+                        onChange={(e) => setFinancialFormData((p) => ({ ...p, ownerDocument: e.target.value.replace(/\D/g, "").slice(0, 14) }))}
+                      />
+                      <input
+                        placeholder="Chave PIX"
+                        className="col-span-2 p-2 text-xs border rounded text-zinc-700"
+                        value={financialFormData.pixKey ?? ""}
+                        maxLength={77}
+                        onChange={(e) => setFinancialFormData((p) => ({ ...p, pixKey: e.target.value.replace(/[<>"'`]/g, "").slice(0, 77) }))}
+                      />
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      <button
+                        type="button"
+                        onClick={handleSaveFinancialDetails}
+                        disabled={savingFinancial}
+                        className="flex-1 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 transition"
+                      >
+                        {savingFinancial ? "Salvando..." : "Salvar"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFinancialEditOpen(false)}
+                        className="px-4 py-2 text-xs font-bold border border-slate-200 text-slate-500 hover:bg-slate-50 rounded-lg transition"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

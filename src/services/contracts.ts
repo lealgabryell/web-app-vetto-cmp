@@ -2,7 +2,7 @@ import { api } from "./api";
 import {
   ContractHistoryResponse,
   ContractResponse,
-  ContractStep,
+  ContractStepResponse,
   CreateContractRequest,
   CreateContractStepRequest,
   UpdateContractRequest,
@@ -35,8 +35,8 @@ export const updateStepStatus = async (
 export const createStep = async (
   contractId: string,
   stepData: CreateContractStepRequest,
-) => {
-  const { data } = await api.post(
+): Promise<ContractStepResponse> => {
+  const { data } = await api.post<ContractStepResponse>(
     `/api/contracts/${contractId}/steps`,
     stepData,
   );
@@ -45,8 +45,8 @@ export const createStep = async (
 
 export const getContractSteps = async (
   contractId: string,
-): Promise<ContractStep[]> => {
-  const { data } = await api.get<ContractStep[]>(
+): Promise<ContractStepResponse[]> => {
+  const { data } = await api.get<ContractStepResponse[]>(
     `/api/contracts/${contractId}/steps`,
   );
   return data;
@@ -57,24 +57,16 @@ export const createContract = async (contractData: CreateContractRequest) => {
   return data;
 };
 
+/** PUT /api/contracts/:contractId/steps/:stepId — replaces full step data */
 export const updateStepData = async (
   contractId: string,
   stepId: string,
-  step: ContractStep,
-): Promise<ContractStep> => {
-  const payload: UpdateContractStepRequest = {
-    titulo: step.title,
-    responsavel: step.responsible,
-    dataInicio: step.startDate,
-    previsaoConclusao: step.expectedEndDate,
-  };
-
-  // README: PATCH /api/contracts/{id}/steps/{stepId}
-  const { data } = await api.patch<ContractStep>(
+  payload: UpdateContractStepRequest,
+): Promise<ContractStepResponse> => {
+  const { data } = await api.put<ContractStepResponse>(
     `/api/contracts/${contractId}/steps/${stepId}`,
     payload,
   );
-
   return data;
 };
 
@@ -83,7 +75,7 @@ export const updateContract = async (
   contractData: UpdateContractRequest,
 ): Promise<UpdatedContractResponse> => {
   // README: PATCH /api/contracts/{id}
-  const { data } = await api.patch<UpdatedContractResponse>(
+  const { data } = await api.put<UpdatedContractResponse>(
     `/api/contracts/${contractId}`,
     contractData,
   );

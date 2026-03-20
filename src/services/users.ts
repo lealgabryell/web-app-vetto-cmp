@@ -1,5 +1,5 @@
 import { api } from "./api";
-import { User, FinancialDetails } from "../types/user";
+import { User, FinancialDetails, UpdateUserRequest } from "../types/user";
 import axios from "axios";
 
 export const createUser = async (userData: Partial<User>): Promise<User> => {
@@ -55,4 +55,20 @@ export const linkFinancialDetails = async (
 export const getUserById = async (id: string): Promise<User> => {
   const { data } = await api.get<User>(`/api/users/${id}`);
   return data;
+};
+
+export const updateUser = async (userId: string, data: UpdateUserRequest): Promise<User> => {
+  const { data: updated } = await api.put<User>(`/api/users/${userId}`, data);
+  return updated;
+};
+
+export const patchFinancialDetails = async (
+  financialDetailsId: string,
+  data: Partial<FinancialDetails>,
+): Promise<FinancialDetails> => {
+  const { data: updated } = await api.patch<FinancialDetails>(
+    `/api/financial-details/${financialDetailsId}`,
+    data,
+  );
+  return updated;
 };

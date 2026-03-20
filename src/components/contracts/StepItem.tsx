@@ -1,13 +1,13 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ContractStep, EtapaStatus } from "../../types/contracts";
+import { ContractStepResponse, EtapaStatus } from "../../types/contracts";
 
 export interface StepItemProps {
-  etapa: ContractStep;
-  isAdmin?: boolean; // Define se exibe o select ou apenas o texto do status
+  etapa: ContractStepResponse;
+  isAdmin?: boolean;
   onStatusChange?: (newStatus: EtapaStatus) => void;
-  onEdit?: (etapa: ContractStep) => void;
+  onEdit?: (etapa: ContractStepResponse) => void;
   onUploadPdf?: (file: File) => Promise<void>;
 }
 
@@ -58,13 +58,44 @@ export default function StepItem({
     >
       <div className="flex justify-between items-center">
         <div>
-          <p className="font-semibold text-slate-800">{etapa.title}</p>
-          <div className="flex gap-3 mt-1">
+          <p className="font-semibold text-slate-800">{etapa.titulo}</p>
+          <div className="flex flex-col gap-1 mt-1">
+            {/* Responsáveis */}
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className="text-[10px] uppercase tracking-wider font-bold opacity-60">Resp.:</span>
+              {etapa.responsaveis.length === 0 ? (
+                <span className="text-[10px] text-slate-400 italic">Não atribuído</span>
+              ) : (
+                etapa.responsaveis.map((u) => (
+                  <span
+                    key={u.id}
+                    title={u.email}
+                    className="text-[10px] font-medium bg-white/70 border border-current/20 rounded-full px-2 py-0.5"
+                  >
+                    {u.name}
+                  </span>
+                ))
+              )}
+            </div>
+            {/* Aprovadores */}
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className="text-[10px] uppercase tracking-wider font-bold opacity-60">Aprov.:</span>
+              {etapa.aprovadores.length === 0 ? (
+                <span className="text-[10px] text-slate-400 italic">Não atribuído</span>
+              ) : (
+                etapa.aprovadores.map((u) => (
+                  <span
+                    key={u.id}
+                    title={u.email}
+                    className="text-[10px] font-medium bg-white/70 border border-current/20 rounded-full px-2 py-0.5"
+                  >
+                    {u.name}
+                  </span>
+                ))
+              )}
+            </div>
             <p className="text-[10px] uppercase tracking-wider font-medium opacity-70">
-              👤 {etapa.responsible}
-            </p>
-            <p className="text-[10px] uppercase tracking-wider font-medium opacity-70">
-              📅 Prev: {new Date(etapa.expectedEndDate).toLocaleDateString()}
+              📅 Prev: {new Date(etapa.previsaoConclusao).toLocaleDateString()}
             </p>
           </div>
         </div>

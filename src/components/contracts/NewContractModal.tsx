@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import ClientSelector from "../users/ClientSelector";
-import { User } from "@/src/types/user";
-import { createUser, getAdmins, linkFinancialDetails } from "@/src/services/users";
+import { User, FinancialDetails } from "@/src/types/user";
+import { createUser, getAdmins, linkFinancialDetails, getFinancialDetailsByAccountNumber } from "@/src/services/users";
 import { toast } from "react-hot-toast/headless";
 import { createContract } from "@/src/services/contracts";
 import {
@@ -12,6 +12,31 @@ import {
 } from "@/src/types/contracts";
 import Cookie from "js-cookie";
 import { decodeJwtPayload } from "@/lib/utils";
+
+// ── Input sanitizers ──────────────────────────────────────────────────────
+/** Remove <, >, ", ', ` to prevent HTML/script injection */
+const sanitizeText = (v: string) => v.replace(/[<>"'`]/g, "");
+/** Keep only digit characters, optionally capped at maxLen */
+const onlyDigits = (v: string, maxLen?: number) => {
+  const d = v.replace(/\D/g, "");
+  return maxLen !== undefined ? d.slice(0, maxLen) : d;
+};
+/** Letters (including accented), hyphens, apostrophes, and spaces only */
+const onlyLetters = (v: string, maxLen?: number) => {
+  const l = v.replace(/[^a-zA-ZÀ-ÿ\s'-]/g, "");
+  return maxLen !== undefined ? l.slice(0, maxLen) : l;
+};
+/** Phone: digits, +, -, (, ), space — max 20 */
+const formatPhone = (v: string) => v.replace(/[^\d+\-()\s]/g, "").slice(0, 20);
+/** CPF / CNPJ: digits, dots, dashes, slashes — max 18 */
+const formatDocument = (v: string) => v.replace(/[^\d.\-/]/g, "").slice(0, 18);
+/** Agency / bank check digit: single digit or X */
+const agencyDigitChar = (v: string) =>
+  v.replace(/[^0-9Xx]/g, "").toUpperCase().slice(0, 1);
+/** Generic safe text: no HTML + length cap */
+const safeText = (v: string, maxLen: number) =>
+  sanitizeText(v).slice(0, maxLen);
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function NewContractModal({ onClose, onSave, existingCategories = [] }: NewContractModalProps) {
   const [selectedClient, setSelectedClient] = useState<User | null>(null);
@@ -95,6 +120,26 @@ export default function NewContractModal({ onClose, onSave, existingCategories =
 
   const [loading, setLoading] = useState(false);
   const [accountNumber, setAccountNumber] = useState("");
+  const [checkingAccount, setCheckingAccount] = useState(false);
+  // undefined = ainda não checado; null = checado, não encontrado; objeto = encontrado
+  const [checkedDetails, setCheckedDetails] = useState<FinancialDetails | null | undefined>(undefined);
+  const [financialForm, setFinancialForm] = useState<Partial<FinancialDetails>>({});
+
+  const handleCheckAccount = async () => {
+    if (!accountNumber.trim()) return;
+    setCheckingAccount(true);
+    try {
+      const details = await getFinancialDetailsByAccountNumber(accountNumber.trim());
+      setCheckedDetails(details);
+      setFinancialForm(details);
+    } catch {
+      setCheckedDetails(null);
+      setFinancialForm({});
+      toast.error("Conta não encontrada. Preencha os dados manualmente.");
+    } finally {
+      setCheckingAccount(false);
+    }
+  };
 
   const [newUser, setNewUser] = useState({
     name: "",
@@ -203,17 +248,19 @@ export default function NewContractModal({ onClose, onSave, existingCategories =
             <input
               placeholder="Título do Contrato"
               required
+              maxLength={100}
               className="w-full text-zinc-700 p-2 border rounded-lg"
               onChange={(e) =>
-                setFormData({ ...formData, title: e.target.value })
+                setFormData({ ...formData, title: safeText(e.target.value, 100) })
               }
             />
 
             <textarea
               placeholder="Descrição"
+              maxLength={500}
               className="w-full p-2 text-zinc-700 border rounded-lg h-24"
               onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
+                setFormData({ ...formData, description: safeText(e.target.value, 500) })
               }
             />
 
@@ -221,10 +268,12 @@ export default function NewContractModal({ onClose, onSave, existingCategories =
               type="number"
               placeholder="Valor Total (R$)"
               required
+              min={0}
               className="w-full text-zinc-700 p-2 border rounded-lg"
-              onChange={(e) =>
-                setFormData({ ...formData, totalValue: Number(e.target.value) })
-              }
+              onChange={(e) => {
+                const val = Math.max(0, Number(e.target.value));
+                setFormData({ ...formData, totalValue: val });
+              }}
             />
 
             <div className="relative">
@@ -232,8 +281,9 @@ export default function NewContractModal({ onClose, onSave, existingCategories =
                 placeholder="Categoria"
                 className="w-full text-zinc-700 p-2 border rounded-lg"
                 value={formData.category}
+                maxLength={50}
                 onChange={(e) => {
-                  setFormData({ ...formData, category: e.target.value.toUpperCase() });
+                  setFormData({ ...formData, category: safeText(e.target.value, 50).toUpperCase() });
                   setShowCategoryDropdown(true);
                 }}
                 onFocus={() => setShowCategoryDropdown(true)}
@@ -310,21 +360,25 @@ export default function NewContractModal({ onClose, onSave, existingCategories =
                     placeholder="Nome"
                     className="p-2 text-zinc-700 text-sm border rounded"
                     value={newUser.name}
-                    onChange={(e) => handleUserChange("name", e.target.value)}
+                    maxLength={100}
+                    onChange={(e) => handleUserChange("name", onlyLetters(e.target.value, 100))}
                   />
                   <input
+                    type="email"
                     placeholder="E-mail"
                     className="p-2 text-sm border rounded"
                     value={newUser.email}
-                    onChange={(e) => handleUserChange("email", e.target.value)}
+                    maxLength={150}
+                    onChange={(e) => handleUserChange("email", safeText(e.target.value, 150).toLowerCase())}
                   />
                   <input
                     placeholder="Senha Provisória"
                     type="password"
                     className="p-2 text-sm border rounded"
                     value={newUser.password}
+                    maxLength={100}
                     onChange={(e) =>
-                      handleUserChange("password", e.target.value)
+                      handleUserChange("password", safeText(e.target.value, 100))
                     }
                   />
                   <input
@@ -340,7 +394,8 @@ export default function NewContractModal({ onClose, onSave, existingCategories =
                     placeholder="Telefone"
                     className="p-2 text-sm border rounded"
                     value={newUser.phone}
-                    onChange={(e) => handleUserChange("phone", e.target.value)}
+                    maxLength={20}
+                    onChange={(e) => handleUserChange("phone", formatPhone(e.target.value))}
                   />
                 </div>
 
@@ -352,48 +407,54 @@ export default function NewContractModal({ onClose, onSave, existingCategories =
                     placeholder="CEP"
                     className="p-2 text-xs border rounded text-zinc-700"
                     value={newUser.address.zipCode}
+                    maxLength={8}
                     onChange={(e) =>
-                      handleAddressChange("zipCode", e.target.value)
+                      handleAddressChange("zipCode", onlyDigits(e.target.value, 8))
                     }
                   />
                   <input
                     placeholder="Rua"
                     className="col-span-2 p-2 text-xs border rounded"
                     value={newUser.address.street}
+                    maxLength={100}
                     onChange={(e) =>
-                      handleAddressChange("street", e.target.value)
+                      handleAddressChange("street", safeText(e.target.value, 100))
                     }
                   />
                   <input
                     placeholder="Número"
                     className="col-span-2 p-2 text-xs border rounded"
                     value={newUser.address.number}
+                    maxLength={10}
                     onChange={(e) =>
-                      handleAddressChange("number", e.target.value)
+                      handleAddressChange("number", safeText(e.target.value, 10))
                     }
                   />
                   <input
                     placeholder="Complemento"
                     className="col-span-2 p-2 text-xs border rounded"
                     value={newUser.address.complement}
+                    maxLength={100}
                     onChange={(e) =>
-                      handleAddressChange("complement", e.target.value)
+                      handleAddressChange("complement", safeText(e.target.value, 100))
                     }
                   />
                   <input
                     placeholder="Bairro"
                     className="col-span-2 p-2 text-xs border rounded"
                     value={newUser.address.neighborhood}
+                    maxLength={100}
                     onChange={(e) =>
-                      handleAddressChange("neighborhood", e.target.value)
+                      handleAddressChange("neighborhood", safeText(e.target.value, 100))
                     }
                   />
                   <input
                     placeholder="Cidade"
                     className="col-span-2 p-2 text-xs border rounded"
                     value={newUser.address.city}
+                    maxLength={60}
                     onChange={(e) =>
-                      handleAddressChange("city", e.target.value)
+                      handleAddressChange("city", onlyLetters(e.target.value, 60))
                     }
                   />
                   <select
@@ -429,13 +490,114 @@ export default function NewContractModal({ onClose, onSave, existingCategories =
               </span>
             </p>
           ) : (
-            <input
-              type="text"
-              placeholder="Número da conta (ex: 000123456)"
-              className="w-full p-2 text-sm text-zinc-700 border rounded-lg"
-              value={accountNumber}
-              onChange={(e) => setAccountNumber(e.target.value)}
-            />
+            <>
+              {/* Input + botão Checar */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Número da conta (ex: 000123456)"
+                  className="flex-1 p-2 text-sm text-zinc-700 border rounded-lg"
+                  value={accountNumber}
+                  onChange={(e) => {
+                    const val = onlyDigits(e.target.value, 9);
+                    setAccountNumber(val);
+                    setCheckedDetails(undefined);
+                    // auto-derive verification digit from last typed character
+                    setFinancialForm({ accountVerificationDigit: val.slice(-1) });
+                  }}
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleCheckAccount())}
+                />
+                <button
+                  type="button"
+                  onClick={handleCheckAccount}
+                  disabled={checkingAccount || !accountNumber.trim() || checkedDetails !== undefined}
+                  className="px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  {checkingAccount ? "..." : "Checar"}
+                </button>
+              </div>
+
+              {/* Detalhes financeiros — exibidos após checagem */}
+              {checkedDetails !== undefined && (
+                <div className="mt-3 p-3 border rounded-lg bg-white space-y-2">
+                  {checkedDetails !== null && (
+                    <p className="text-xs text-green-700 font-semibold flex items-center gap-1">
+                      ✅ Conta encontrada — campos preenchidos automaticamente
+                    </p>
+                  )}
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      placeholder="Cód. Banco"
+                      className="p-2 text-xs border rounded text-zinc-700"
+                      value={financialForm.bankCode ?? ""}
+                      maxLength={4}
+                      onChange={(e) => setFinancialForm((p) => ({ ...p, bankCode: onlyDigits(e.target.value, 4) }))}
+                    />
+                    <input
+                      placeholder="Nome do Banco"
+                      className="p-2 text-xs border rounded text-zinc-700"
+                      value={financialForm.bankName ?? ""}
+                      maxLength={60}
+                      onChange={(e) => setFinancialForm((p) => ({ ...p, bankName: safeText(e.target.value, 60) }))}
+                    />
+                    <input
+                      placeholder="Agência"
+                      className="p-2 text-xs border rounded text-zinc-700"
+                      value={financialForm.agency ?? ""}
+                      maxLength={5}
+                      onChange={(e) => setFinancialForm((p) => ({ ...p, agency: onlyDigits(e.target.value, 5) }))}
+                    />
+                    <input
+                      placeholder="Dígito da Agência"
+                      className="p-2 text-xs border rounded text-zinc-700"
+                      value={financialForm.agencyDigit ?? ""}
+                      maxLength={1}
+                      onChange={(e) => setFinancialForm((p) => ({ ...p, agencyDigit: agencyDigitChar(e.target.value) }))}
+                    />
+                    {/* Dígito da conta: derivado automaticamente do último dígito do número de conta */}
+                    <div className="p-2 text-xs border rounded bg-slate-50 text-zinc-500 flex items-center gap-1">
+                      <span className="text-zinc-400">Dígito da Conta:</span>
+                      <span className="font-mono font-semibold text-zinc-700">
+                        {financialForm.accountVerificationDigit ?? "—"}
+                      </span>
+                      <span className="ml-auto text-[10px] text-slate-400">(automático)</span>
+                    </div>
+                    <select
+                      className="p-2 text-xs border rounded bg-white text-zinc-700"
+                      value={financialForm.accountType ?? ""}
+                      onChange={(e) => setFinancialForm((p) => ({ ...p, accountType: e.target.value as FinancialDetails["accountType"] }))}
+                    >
+                      <option value="">Tipo de conta</option>
+                      <option value="CORRENTE">Corrente</option>
+                      <option value="POUPANCA">Poupança</option>
+                      <option value="SALARIO">Salário</option>
+                      <option value="PAGAMENTO">Pagamento</option>
+                    </select>
+                    <input
+                      placeholder="Titular"
+                      className="p-2 text-xs border rounded text-zinc-700"
+                      value={financialForm.ownerName ?? ""}
+                      maxLength={100}
+                      onChange={(e) => setFinancialForm((p) => ({ ...p, ownerName: onlyLetters(e.target.value, 100) }))}
+                    />
+                    <input
+                      placeholder="CPF / CNPJ do Titular"
+                      className="p-2 text-xs border rounded text-zinc-700"
+                      value={financialForm.ownerDocument ?? ""}
+                      maxLength={18}
+                      onChange={(e) => setFinancialForm((p) => ({ ...p, ownerDocument: formatDocument(e.target.value) }))}
+                    />
+                    <input
+                      placeholder="Chave PIX"
+                      className="col-span-2 p-2 text-xs border rounded text-zinc-700"
+                      value={financialForm.pixKey ?? ""}
+                      maxLength={77}
+                      onChange={(e) => setFinancialForm((p) => ({ ...p, pixKey: safeText(e.target.value, 77) }))}
+                    />
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
