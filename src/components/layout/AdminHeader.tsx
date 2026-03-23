@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Calendar, UserCircle, LogOut } from 'lucide-react';
+import { LayoutDashboard, Calendar, UserCircle, Building2, LogOut } from 'lucide-react';
 import Cookie from 'js-cookie';
 
 export default function AdminHeader() {
@@ -17,7 +17,8 @@ export default function AdminHeader() {
   const navItems = [
     { name: 'Contratos', href: '/admin', icon: LayoutDashboard },
     { name: 'Agenda', href: '/admin/agenda', icon: Calendar },
-    { name: 'Meu Perfil', href: '/admin/perfil', icon: UserCircle },
+    { name: 'Setores', href: '/admin/companySections', icon: Building2 },
+    { name: 'Meu Perfil', href: '/admin/profile', icon: UserCircle },
   ];
 
   return (
