@@ -3,7 +3,7 @@ import Cookie from 'js-cookie';
 import toast from 'react-hot-toast';
 
 export const api = axios.create({
-  baseURL: 'https://hml-api-tratti-arq.onrender.com',
+  baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080',
 });
 
 // Interceptor para adicionar o Token em todas as chamadas
