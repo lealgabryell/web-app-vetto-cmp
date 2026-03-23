@@ -3,7 +3,7 @@ import Cookie from 'js-cookie';
 import toast from 'react-hot-toast';
 
 export const api = axios.create({
-  baseURL: 'http://localhost:8080',
+  baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080',
 });
 
 // Interceptor para adicionar o Token em todas as chamadas
