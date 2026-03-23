@@ -52,6 +52,11 @@ export const linkFinancialDetails = async (
   await updateUserFinancialDetails(userId, details.id);
 };
 
+export const getCurrentUser = async (): Promise<User> => {
+  const { data } = await api.get<User>("/api/users/me");
+  return data;
+};
+
 export const getUserById = async (id: string): Promise<User> => {
   const { data } = await api.get<User>(`/api/users/${id}`);
   return data;
@@ -60,6 +65,10 @@ export const getUserById = async (id: string): Promise<User> => {
 export const updateUser = async (userId: string, data: UpdateUserRequest): Promise<User> => {
   const { data: updated } = await api.put<User>(`/api/users/${userId}`, data);
   return updated;
+};
+
+export const deactivateUser = async (userId: string): Promise<void> => {
+  await api.patch(`/api/users/${userId}/deactivate`);
 };
 
 export const patchFinancialDetails = async (
