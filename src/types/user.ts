@@ -1,3 +1,19 @@
+export type AccountType = "CORRENTE" | "POUPANCA" | "SALARIO" | "PAGAMENTO";
+
+export interface FinancialDetails {
+  id: string;
+  bankCode: string;
+  bankName: string;
+  agency: string;
+  agencyDigit: string;
+  accountNumber: string;
+  accountVerificationDigit: string;
+  accountType: AccountType;
+  ownerDocument: string;
+  ownerName: string;
+  pixKey: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -9,6 +25,9 @@ export interface User {
   phone: string;
   address: Address;
   active: boolean;
+  /** Marks ADMIN users who are directors of the company — used for access control and UI filters */
+  director: boolean;
+  financialDetails?: FinancialDetails;
 }
 
 export interface Address {
@@ -19,4 +38,29 @@ export interface Address {
     city: string;
     state: string;
     zipCode: string;
+}
+
+export interface FinancialDetailsRequest {
+  bankCode?: string;
+  bankName?: string;
+  agency?: string;
+  agencyDigit?: string;
+  accountNumber?: string;
+  accountVerificationDigit?: string;
+  accountType?: AccountType;
+  ownerDocument?: string;
+  ownerName?: string;
+  pixKey?: string;
+}
+
+export interface UpdateUserRequest {
+  name?: string;
+  cpf?: string;
+  /** ISO date YYYY-MM-DD */
+  birthDate?: string;
+  email?: string;
+  phone?: string;
+  address?: Address;
+  financialDetails?: FinancialDetailsRequest;
+  director?: boolean;
 }

@@ -55,15 +55,6 @@ export default function ContractCard({ contract, onViewDetails, hideAction = fal
           <p className="text-sm font-semibold text-slate-900">{formattedValue}</p>
           <p className="text-[10px] text-slate-400 uppercase tracking-widest">Valor Total</p>
         </div>
-        
-        {!hideAction && (
-          <button 
-            onClick={() => onViewDetails(contract)}
-            className="bg-blue-50 hover:bg-blue-100 text-blue-600 px-4 py-2 rounded-lg text-sm font-semibold transition-all active:scale-95"
-          >
-            Ver detalhes
-          </button>
-        )}
       </div>
     </div>
   );

@@ -1,21 +1,31 @@
 import { useState, useEffect } from "react";
 import { ContractResponse, ContractStatus, UpdateContractRequest } from "../../types/contracts";
 
+function normalizeCategory(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .trim();
+}
+
 interface EditContractModalProps {
   contract: ContractResponse;
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: UpdateContractRequest) => Promise<void>;
+  existingCategories?: string[];
 }
 
-export default function EditContractModal({ contract, isOpen, onClose, onSave }: EditContractModalProps) {
+export default function EditContractModal({ contract, isOpen, onClose, onSave, existingCategories = [] }: EditContractModalProps) {
   const [formData, setFormData] = useState<UpdateContractRequest>({
     title: "",
     description: "",
     totalValue: 0,
     startDate: "",
     endDate: "",
-    status: "DRAFT"
+    status: "DRAFT",
+    keyClauses: [],
   });
   const [loading, setLoading] = useState(false);
 
@@ -28,7 +38,14 @@ export default function EditContractModal({ contract, isOpen, onClose, onSave }:
         // Garante formato YYYY-MM-DD para o input date
         startDate: contract.startDate.split("T")[0],
         endDate: contract.endDate.split("T")[0],
-        status: contract.status
+        status: contract.status,
+        scannedContractUrl: contract.scannedContractUrl,
+        finalProjectUrl: contract.finalProjectUrl,
+        category: contract.category,
+        aiRiskScore: contract.aiRiskScore,
+        aiAnalysisSummary: contract.aiAnalysisSummary,
+        autoExtracted: contract.autoExtracted,
+        keyClauses: contract.keyClauses ?? [],
       });
     }
   }, [contract]);
@@ -39,11 +56,13 @@ export default function EditContractModal({ contract, isOpen, onClose, onSave }:
     e.preventDefault();
     setLoading(true);
     try {
-      await onSave(formData);
+      await onSave({
+        ...formData,
+        category: formData.category ? normalizeCategory(formData.category) : undefined,
+      });
       onClose();
     } catch (error) {
       console.error(error);
-      // O toast de erro geralmente é tratado no pai, mas pode ser reforçado aqui
     } finally {
       setLoading(false);
     }
@@ -114,6 +133,27 @@ export default function EditContractModal({ contract, isOpen, onClose, onSave }:
                     <option value="FINISHED">Finalizado</option>
                 </select>
             </div>
+          </div>
+
+          {/* Categoria */}
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1">Categoria</label>
+            <input
+              type="text"
+              list="category-options"
+              placeholder="Digite ou selecione uma categoria..."
+              className="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              value={formData.category ?? ""}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+            />
+            <datalist id="category-options">
+              {existingCategories.map((cat) => (
+                <option key={cat} value={cat} />
+              ))}
+            </datalist>
+            <p className="text-[10px] text-slate-400 mt-1">
+              Será salvo em maiúsculas e sem acentos automaticamente.
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
