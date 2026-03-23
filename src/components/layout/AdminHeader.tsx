@@ -28,7 +28,7 @@ export default function AdminHeader() {
           {/* Logo / Nome do Sistema */}
           <div className="flex items-center">
             <span className="text-xl font-bold text-blue-600 tracking-tight">
-              Tratti<span className="text-slate-800">Arq</span>
+              Vetto Platform
             </span>
           </div>
 

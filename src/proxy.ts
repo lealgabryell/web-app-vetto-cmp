@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+// Middleware para proteger rotas privadas e redirecionar usuários não autenticados
 // Usamos o 'export default' para garantir que o Next.js encontre a função
 export default function middleware(request: NextRequest) {
   const token = request.cookies.get("user_token")?.value;
