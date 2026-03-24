@@ -18,15 +18,22 @@ export interface UserSummary {
   email: string;
 }
 
+/** Approver with individual approval status */
+export interface AprovadorStatus extends UserSummary {
+  aprovado: boolean;
+  aprovadoEm: string | null; // ISO 8601 or null
+}
+
 /** Full DTO returned by every step endpoint (GET / POST / PUT) */
 export interface ContractStepResponse {
   id: string;
   titulo: string;
+  instrucao: string | null;     // optional orientation text
   dataInicio: string;           // "YYYY-MM-DD"
   previsaoConclusao: string;    // "YYYY-MM-DD"
   status: EtapaStatus;
   responsaveis: UserSummary[];  // may be []
-  aprovadores: UserSummary[];   // may be []
+  aprovadores: AprovadorStatus[]; // may be []
   pdfUrls: string[];
 }
 
@@ -72,6 +79,7 @@ export interface ContractResponse {
 /** POST /api/contracts/:contractId/steps */
 export interface CreateContractStepRequest {
   titulo: string;              // obrigatório
+  instrucao?: string | null;   // opcional
   dataInicio: string;          // "YYYY-MM-DD"
   expectedEndDate: string;     // "YYYY-MM-DD"
   status: EtapaStatus;
@@ -139,6 +147,7 @@ export interface NewContractModalProps {
 /** PUT /api/contracts/:contractId/steps/:stepId */
 export interface UpdateContractStepRequest {
   titulo: string;                   // obrigatório
+  instrucao?: string | null;        // opcional
   dataInicio: string;               // "YYYY-MM-DD"
   previsaoConclusao: string;        // "YYYY-MM-DD"
   responsavelIds?: string[];        // substitui lista inteira

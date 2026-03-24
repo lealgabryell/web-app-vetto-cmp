@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Calendar, UserCircle, Building2, LogOut } from 'lucide-react';
 import Cookie from 'js-cookie';
+import { NotificationBell } from '../notifications/NotificationBell';
 
 export default function AdminHeader() {
   const pathname = usePathname();
@@ -56,8 +57,9 @@ export default function AdminHeader() {
             })}
           </nav>
 
-          {/* Botão de Logout */}
-          <div className="flex items-center">
+          {/* Sino de Notificações + Botão de Logout */}
+          <div className="flex items-center gap-6">
+            <NotificationBell />
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 text-slate-500 hover:text-red-600 transition-colors text-sm font-medium group"

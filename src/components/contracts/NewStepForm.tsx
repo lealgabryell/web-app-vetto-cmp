@@ -14,6 +14,7 @@ interface NewStepFormProps {
 export default function NewStepForm({ onSave, onCancel, isLoading }: NewStepFormProps) {
   const today = new Date().toISOString().split('T')[0];
   const [titulo, setTitulo] = useState('');
+  const [instrucao, setInstrucao] = useState('');
   const [dataInicio, setDataInicio] = useState(today);
   const [expectedEndDate, setExpectedEndDate] = useState('');
   const [status, setStatus] = useState<EtapaStatus>('PROGRAMADA');
@@ -39,6 +40,7 @@ export default function NewStepForm({ onSave, onCancel, isLoading }: NewStepForm
     setDateError('');
     const payload: CreateContractStepRequest = {
       titulo,
+      instrucao: instrucao.trim() || null,
       dataInicio,
       expectedEndDate,
       status,
@@ -63,6 +65,18 @@ export default function NewStepForm({ onSave, onCancel, isLoading }: NewStepForm
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
               placeholder="Ex: Estudo Preliminar"
+            />
+          </div>
+
+          {/* Instrução */}
+          <div>
+            <label className="text-xs font-semibold text-slate-500 uppercase">Instrução <span className="normal-case font-normal text-slate-400">(opcional)</span></label>
+            <textarea
+              rows={3}
+              className="w-full text-gray-700 mt-1 p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              value={instrucao}
+              onChange={(e) => setInstrucao(e.target.value)}
+              placeholder="Orientações para os responsáveis pela etapa..."
             />
           </div>
 

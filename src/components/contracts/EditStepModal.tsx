@@ -12,20 +12,22 @@ interface EditStepModalProps {
 
 export default function EditStepModal({ step, isOpen, onClose, onSave }: EditStepModalProps) {
   const [titulo, setTitulo] = useState(step.titulo);
+  const [instrucao, setInstrucao] = useState(step.instrucao ?? '');
   const [dataInicio, setDataInicio] = useState(step.dataInicio);
   const [previsaoConclusao, setPrevisaoConclusao] = useState(step.previsaoConclusao);
   const [responsavelIds, setResponsavelIds] = useState<string[]>(step.responsaveis.map((u) => u.id));
-  const [aprovadorIds, setAprovadorIds] = useState<string[]>(step.aprovadores.map((u) => u.id));
+  const [aprovadorIds, setAprovadorIds] = useState<string[]>(step.aprovadores.map((a) => a.id));
   const [admins, setAdmins] = useState<User[]>([]);
   const [dateError, setDateError] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setTitulo(step.titulo);
+    setInstrucao(step.instrucao ?? '');
     setDataInicio(step.dataInicio);
     setPrevisaoConclusao(step.previsaoConclusao);
     setResponsavelIds(step.responsaveis.map((u) => u.id));
-    setAprovadorIds(step.aprovadores.map((u) => u.id));
+    setAprovadorIds(step.aprovadores.map((a) => a.id));
   }, [step]);
 
   useEffect(() => {
@@ -49,6 +51,7 @@ export default function EditStepModal({ step, isOpen, onClose, onSave }: EditSte
     try {
       const payload: UpdateContractStepRequest = {
         titulo,
+        instrucao: instrucao.trim() || null,
         dataInicio,
         previsaoConclusao,
         ...(responsavelIds.length > 0 && { responsavelIds }),
@@ -78,6 +81,20 @@ export default function EditStepModal({ step, isOpen, onClose, onSave }: EditSte
               className="w-full border rounded-lg p-2 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
+            />
+          </div>
+
+          {/* Instrução */}
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1">
+              Instrução <span className="normal-case font-normal text-slate-400">(opcional)</span>
+            </label>
+            <textarea
+              rows={3}
+              className="w-full border rounded-lg p-2 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+              value={instrucao}
+              onChange={(e) => setInstrucao(e.target.value)}
+              placeholder="Orientações para os responsáveis..."
             />
           </div>
 

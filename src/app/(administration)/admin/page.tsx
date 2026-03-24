@@ -11,7 +11,9 @@ import {
   updateStepData,
   updateStepStatus,
   uploadStepPDF,
+  approveStep,
 } from "../../../services/contracts";
+import { createNotification } from "../../../services/notifications";
 import { getAdmins, getUserById, updateUser, patchFinancialDetails } from "../../../services/users";
 import { User, FinancialDetailsRequest, AccountType, UpdateUserRequest } from "../../../types/user";
 import {
@@ -62,6 +64,7 @@ export default function AdminDashboard() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [loggedUserId, setLoggedUserId] = useState("");
+  const [loggedUserName, setLoggedUserName] = useState("");
   const [isLoggedUserDirector, setIsLoggedUserDirector] = useState(false);
   const [clientDetailsUser, setClientDetailsUser] = useState<User | null>(null);
   const [clientDetailsOpen, setClientDetailsOpen] = useState(false);
@@ -158,6 +161,7 @@ export default function AdminDashboard() {
           (u) => u.id === jwtIdentifier || u.email === jwtIdentifier,
         );
         setLoggedUserId(loggedAdmin?.id ?? jwtIdentifier);
+        setLoggedUserName(loggedAdmin?.name ?? '');
         setIsLoggedUserDirector(loggedAdmin?.director ?? false);
       } catch (e: unknown) {
         toast.error("Erro ao carregar contratos: Faça login novamente!");
@@ -176,6 +180,30 @@ export default function AdminDashboard() {
     }
   }, [selectedContract]);
 
+  // Abre a listagem de etapas a partir do clique em uma notificação
+  useEffect(() => {
+    const handler = async (e: Event) => {
+      const { contractId } = (e as CustomEvent<{ contractId: string; contractStepId: string }>).detail;
+
+      // Encontra o contrato na lista já carregada e abre o painel de etapas
+      const contract = contracts.find((c) => c.id === contractId) ?? null;
+      if (contract) {
+        setSelectedContract(contract);
+        setShowSteps(true);
+      }
+
+      try {
+        const steps = await getContractSteps(contractId);
+        setCurrentSteps(steps);
+      } catch {
+        toast.error('Erro ao carregar etapas da notificação.');
+      }
+    };
+
+    window.addEventListener('open-step-modal', handler);
+    return () => window.removeEventListener('open-step-modal', handler);
+  }, [contracts]);
+
   useEffect(() => {
     const anyOpen =
       !!selectedContract ||
@@ -188,15 +216,16 @@ export default function AdminDashboard() {
     return () => { document.body.style.overflow = ""; };
   }, [selectedContract, isNewContractModalOpen, isEditContractModalOpen, isVettoModalOpen, clientDetailsOpen, editingStep]);
 
-  const filteredSteps = currentSteps.filter((etapa) => {
-    const matchesSearch = etapa.titulo
-      .toLowerCase()
-      .includes(stepSearch.toLowerCase());
-    const matchesStatus =
-      stepStatusFilter === "ALL" || etapa.status === stepStatusFilter;
+  const filteredSteps = currentSteps
+    .filter((etapa) => {
+      const matchesSearch = etapa.titulo
+        .toLowerCase()
+        .includes(stepSearch.toLowerCase());
+      const matchesStatus =
+        stepStatusFilter === "ALL" || etapa.status === stepStatusFilter;
 
-    return matchesSearch && matchesStatus;
-  });
+      return matchesSearch && matchesStatus;
+    });
 
   const handleCancel = async () => {
     if (!selectedContract) return;
@@ -279,7 +308,7 @@ export default function AdminDashboard() {
 
       toast.success("Etapa adicionada!");
 
-      const updatedEtapas = [...(currentSteps || []), newStep];
+      const updatedEtapas = [newStep, ...(currentSteps || [])];
       setCurrentSteps(updatedEtapas);
 
       const updatedContract = { ...selectedContract, etapas: updatedEtapas };
@@ -349,6 +378,61 @@ export default function AdminDashboard() {
       );
     } catch (error: unknown) {
       toast.error("Erro ao anexar PDF");
+    }
+  };
+
+  const handleApproveStep = async (stepId: string) => {
+    if (!selectedContract) return;
+    try {
+      await approveStep(selectedContract.id, stepId);
+      toast.success("Aprovação registrada com sucesso!");
+      const now = new Date().toISOString();
+      setCurrentSteps((prev) =>
+        prev.map((s) =>
+          s.id === stepId
+            ? {
+                ...s,
+                aprovadores: s.aprovadores.map((a) =>
+                  a.id === loggedUserId ? { ...a, aprovado: true, aprovadoEm: now } : a,
+                ),
+              }
+            : s,
+        ),
+      );
+    } catch (error: unknown) {
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      if (status === 400) toast.error("Você já aprovou esta etapa.");
+      else if (status === 403) toast.error("Você não é aprovador desta etapa.");
+      else toast.error("Erro ao registrar aprovação.");
+    }
+  };
+
+  const handleRequestApprovalStep = async (stepId: string) => {
+    if (!selectedContract) return;
+    const step = currentSteps.find((s) => s.id === stepId);
+    if (!step) return;
+
+    const pendingApprovers = step.aprovadores.filter((a) => !a.aprovado);
+    if (pendingApprovers.length === 0) return;
+
+    const responsavelName = loggedUserName || 'Um responsável';
+
+    try {
+      await Promise.all(
+        pendingApprovers.map((aprovador) =>
+          createNotification({
+            recipientId: aprovador.id,
+            title: 'Aprovação solicitada',
+            message: `${responsavelName} pediu aprovação na etapa "${step.titulo}" do contrato "${selectedContract.title}".`,
+            type: 'APROVACAO_SOLICITADA',
+            contractId: selectedContract.id,
+            contractStepId: stepId,
+          }),
+        ),
+      );
+      toast.success('Pedido de aprovação enviado aos aprovadores!');
+    } catch {
+      toast.error('Erro ao enviar pedido de aprovação.');
     }
   };
 
@@ -436,7 +520,7 @@ export default function AdminDashboard() {
     setLoadingSteps(true);
     try {
       const data = await getContractSteps(contractId);
-      setCurrentSteps(data);
+      setCurrentSteps([...data].reverse());
     } catch (error: unknown) {
       toast.error("Erro ao carregar etapas do banco");
     } finally {
@@ -919,6 +1003,8 @@ export default function AdminDashboard() {
                         <StepItem
                           key={etapa.id}
                           etapa={etapa}
+                          contractId={selectedContract.id}
+                          loggedUserId={loggedUserId}
                           isAdmin={true}
                           onStatusChange={(newStatus) =>
                             handleUpdateStep(
@@ -929,6 +1015,8 @@ export default function AdminDashboard() {
                           }
                           onEdit={(step) => setEditingStep(step)}
                           onUploadPdf={(file) => handleStepPdfUpload(etapa.id, file)}
+                          onApprove={handleApproveStep}
+                          onRequestApproval={handleRequestApprovalStep}
                         />
                       ))
                     ) : (
