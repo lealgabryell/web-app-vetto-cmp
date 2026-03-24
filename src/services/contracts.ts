@@ -99,6 +99,11 @@ export const uploadContractPDF = async (
 };
 
 
+export const getDistinctCategories = async (): Promise<string[]> => {
+  const { data } = await api.get<string[]>("/api/contracts/categories");
+  return data;
+};
+
 export const getContractHistory = async (contractId: string): Promise<ContractHistoryResponse[]> => {
   const response = await api.get<ContractHistoryResponse[]>(`/api/contracts/${contractId}/history`);
   return response.data;
