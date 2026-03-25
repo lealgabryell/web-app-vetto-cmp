@@ -7,6 +7,7 @@ import {
   getContractHistory,
   getContracts,
   getContractSteps,
+  getDistinctCategories,
   updateContract,
   updateStepData,
   updateStepStatus,
@@ -27,7 +28,7 @@ import {
   UpdatedContractResponse,
 } from "../../../types/contracts";
 import toast from "react-hot-toast";
-import ContractCard from "@/src/components/contracts/ContractCard";
+import ContractRowItem from "@/src/components/contracts/ContractRowItem";
 import StepItem from "@/src/components/contracts/StepItem";
 import NewStepForm from "@/src/components/contracts/NewStepForm";
 import NewContractModal from "@/src/components/contracts/NewContractModal";
@@ -40,9 +41,21 @@ import { VettoAnalysisModal } from "@/src/components/contracts/VettoModal";
 import Cookie from "js-cookie";
 import { decodeJwtPayload } from "@/lib/utils";
 
+
+// ── Cache em módulo — persiste entre navegações na mesma sessão ───────────────
+interface DashboardCache {
+  contracts: ContractResponse[];
+  categories: string[];
+  loggedUserId: string;
+  loggedUserName: string;
+  isLoggedUserDirector: boolean;
+}
+let _cache: DashboardCache | null = null;
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function AdminDashboard() {
-  const [contracts, setContracts] = useState<ContractResponse[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [contracts, setContracts] = useState<ContractResponse[]>(_cache?.contracts ?? []);
+  const [loading, setLoading] = useState(!_cache);
   const [selectedContract, setSelectedContract] =
     useState<ContractResponse | null>(null);
   const [showSteps, setShowSteps] = useState(false);
@@ -62,10 +75,13 @@ export default function AdminDashboard() {
   const [, setLoadingHistory] = useState(false);
   const [isVettoModalOpen, setIsVettoModalOpen] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
-  const [loggedUserId, setLoggedUserId] = useState("");
-  const [loggedUserName, setLoggedUserName] = useState("");
-  const [isLoggedUserDirector, setIsLoggedUserDirector] = useState(false);
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(() => {
+    if (!_cache?.contracts.length) return new Set();
+    return new Set(_cache.contracts.map((c) => c.category ?? "Sem categoria"));
+  });
+  const [loggedUserId, setLoggedUserId] = useState(_cache?.loggedUserId ?? "");
+  const [loggedUserName, setLoggedUserName] = useState(_cache?.loggedUserName ?? "");
+  const [isLoggedUserDirector, setIsLoggedUserDirector] = useState(_cache?.isLoggedUserDirector ?? false);
   const [clientDetailsUser, setClientDetailsUser] = useState<User | null>(null);
   const [clientDetailsOpen, setClientDetailsOpen] = useState(false);
   const [loadingClientDetails, setLoadingClientDetails] = useState(false);
@@ -73,6 +89,12 @@ export default function AdminDashboard() {
   const [financialFormData, setFinancialFormData] = useState<FinancialDetailsRequest>({});
   const [savingFinancial, setSavingFinancial] = useState(false);
   const [canEditFinancial, setCanEditFinancial] = useState(false);
+  const [categories, setCategories] = useState<string[]>(_cache?.categories ?? []);
+
+  /** Atualiza o cache de módulo sempre que a lista de contratos muda */
+  const syncCache = (updated: ContractResponse[]) => {
+    if (_cache) _cache.contracts = updated;
+  };
 
   const canViewContractDetails = (contract: ContractResponse): boolean => {
     if (!loggedUserId) return false;
@@ -153,23 +175,67 @@ export default function AdminDashboard() {
     const jwtIdentifier = (payload.id ?? payload.sub ?? "") as string;
 
     async function loadData() {
+      // Variável local para capturar o resultado do fetch — evita closure stale sobre o state
+      let fetchedContracts: ContractResponse[] = _cache?.contracts ?? [];
+
       try {
-        const [data, admins] = await Promise.all([getContracts(), getAdmins()]);
+        // Contratos primeiro — desbloqueia a lista imediatamente
+        const data = await getContracts();
+        fetchedContracts = data;
         setContracts(data);
-        // Resolve o UUID real cruzando por id ou e-mail no cadastro de admins
-        const loggedAdmin = admins.find(
-          (u) => u.id === jwtIdentifier || u.email === jwtIdentifier,
-        );
-        setLoggedUserId(loggedAdmin?.id ?? jwtIdentifier);
-        setLoggedUserName(loggedAdmin?.name ?? '');
-        setIsLoggedUserDirector(loggedAdmin?.director ?? false);
-      } catch (e: unknown) {
+
+        // Inicia todos os grupos de categoria retraídos
+        const allCategories = Array.from(new Set(data.map((c) => c.category ?? "Sem categoria")));
+        setCollapsedCategories(new Set(allCategories));
+
+        // Grava cache imediatamente após contratos — antes das chamadas de background.
+        // Assim, mesmo que o usuário navegue antes de getAdmins() completar, o cache já existe.
+        _cache = {
+          contracts: data,
+          categories: _cache?.categories ?? [],
+          loggedUserId: _cache?.loggedUserId ?? "",
+          loggedUserName: _cache?.loggedUserName ?? "",
+          isLoggedUserDirector: _cache?.isLoggedUserDirector ?? false,
+        };
+      } catch {
         toast.error("Erro ao carregar contratos: Faça login novamente!");
       } finally {
         setLoading(false);
       }
+
+      // Admins e categorias em segundo plano — não bloqueiam a renderização
+      Promise.all([getAdmins(), getDistinctCategories()])
+        .then(([admins, cats]) => {
+          const loggedAdmin = admins.find(
+            (u) => u.id === jwtIdentifier || u.email === jwtIdentifier,
+          );
+          const resolvedId = loggedAdmin?.id ?? jwtIdentifier;
+          const resolvedName = loggedAdmin?.name ?? '';
+          const resolvedDirector = loggedAdmin?.director ?? false;
+
+          setCategories(cats);
+          setLoggedUserId(resolvedId);
+          setLoggedUserName(resolvedName);
+          setIsLoggedUserDirector(resolvedDirector);
+
+          // Atualiza o cache com os dados completos
+          _cache = {
+            contracts: fetchedContracts,
+            categories: cats,
+            loggedUserId: resolvedId,
+            loggedUserName: resolvedName,
+            isLoggedUserDirector: resolvedDirector,
+          };
+        })
+        .catch(() => {/* silencioso — dados secundários */});
     }
-    loadData();
+
+    // Se já existe cache, mostra imediatamente e atualiza em segundo plano
+    if (_cache) {
+      loadData(); // refresh silencioso
+    } else {
+      loadData();
+    }
   }, []);
 
   useEffect(() => {
@@ -235,11 +301,13 @@ export default function AdminDashboard() {
       toast.success("Contrato cancelado com sucesso");
 
       // 1. Atualiza na lista geral para mudar a cor do card
-      setContracts((prev) =>
-        prev.map((c) =>
-          c.id === selectedContract.id ? { ...c, status: "CANCELED" } : c,
-        ),
-      );
+      setContracts((prev) => {
+        const next = prev.map((c) =>
+          c.id === selectedContract.id ? { ...c, status: "CANCELED" as const } : c,
+        );
+        syncCache(next);
+        return next;
+      });
 
       // 2. Atualiza o contrato selecionado para o modal refletir a mudança na hora
       setSelectedContract((prev) =>
@@ -330,6 +398,7 @@ export default function AdminDashboard() {
     try {
       const data = await getContracts();
       setContracts(data);
+      if (_cache) _cache.contracts = data;
       setIsNewContractModalOpen(false);
       toast.success("Lista de contratos atualizada!");
     } catch (e: unknown) {
@@ -451,7 +520,7 @@ export default function AdminDashboard() {
         // Campos vindos do request (o que o usuário editou)
         title: data.title,
         description: data.description,
-        totalValue: data.totalValue,
+        totalValue: data.totalValue ?? null,
         startDate: data.startDate,
         endDate: data.endDate,
         status: data.status,
@@ -469,11 +538,13 @@ export default function AdminDashboard() {
       setSelectedContract(newSelectedContract);
 
       // 3. Atualiza a Lista Geral de Contratos
-      setContracts((prev) =>
-        prev.map((c) =>
+      setContracts((prev) => {
+        const next = prev.map((c) =>
           c.id === selectedContract.id ? newSelectedContract : c,
-        ),
-      );
+        );
+        syncCache(next);
+        return next;
+      });
 
       setIsEditContractModalOpen(false);
     } catch (error: unknown) {
@@ -689,63 +760,13 @@ export default function AdminDashboard() {
               {!collapsedCategories.has(category) && (
                 <div className="divide-y divide-slate-100 overflow-y-auto max-h-[420px]">
                 {categoryContracts.map((contract) => (
-                  <div
+                  <ContractRowItem
                     key={contract.id}
-                    onClick={() => setSelectedContract(contract)}
-                    className="w-full text-left px-4 py-3 transition-colors hover:bg-slate-50 cursor-pointer"
-                  >
-                    <div className="flex items-start justify-between gap-2 min-w-0">
-                      {/* Lado esquerdo: título + cliente */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <p className="text-xs font-semibold text-slate-800 truncate leading-snug">
-                            {contract.title}
-                          </p>
-                          {(() => {
-                            const daysLeft = Math.ceil(
-                              (new Date(contract.endDate).getTime() - Date.now()) /
-                                (1000 * 60 * 60 * 24),
-                            );
-                            return daysLeft <= 45 && daysLeft >= 0 ? (
-                              <span className="flex-shrink-0 text-[9px] font-bold bg-red-100 text-red-600 border border-red-300 rounded px-1 py-0.5 leading-none">
-                                🚩 {daysLeft}d
-                              </span>
-                            ) : null;
-                          })()}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenClientDetails(contract.clientId, contract);
-                          }}
-                          className="text-[11px] text-blue-500 hover:text-blue-700 hover:underline truncate mt-0.5 block text-left"
-                        >
-                          {contract.clientName}
-                        </button>
-                        <p className="text-[10px] text-slate-400 mt-1">
-                          {new Date(contract.startDate).toLocaleDateString("pt-BR")}
-                          {" → "}
-                          {new Date(contract.endDate).toLocaleDateString("pt-BR")}
-                        </p>
-                      </div>
-
-                      {/* Lado direito: badge status + valor */}
-                      <div className="flex-shrink-0 flex flex-col items-end gap-1">
-                        <span
-                          className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${statusConfig[contract.status].color}`}
-                        >
-                          {statusConfig[contract.status].label}
-                        </span>
-                        <span className="text-[10px] font-semibold text-slate-500">
-                          {new Intl.NumberFormat("pt-BR", {
-                            style: "currency",
-                            currency: "BRL",
-                          }).format(contract.totalValue)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                    contract={contract}
+                    statusConfig={statusConfig}
+                    onSelect={setSelectedContract}
+                    onOpenClientDetails={handleOpenClientDetails}
+                  />
                 ))}
               </div>
               )}
@@ -921,10 +942,9 @@ export default function AdminDashboard() {
                       <div>
                         <p className="text-xs text-slate-400 mb-1">Valor Total</p>
                         <p className="text-sm font-bold text-slate-800">
-                          {new Intl.NumberFormat("pt-BR", {
-                            style: "currency",
-                            currency: "BRL",
-                          }).format(selectedContract.totalValue)}
+                          {selectedContract.totalValue != null
+                            ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(selectedContract.totalValue)
+                            : "—"}
                         </p>
                       </div>
                     </div>
@@ -1062,13 +1082,7 @@ export default function AdminDashboard() {
         <NewContractModal
           onClose={() => setIsNewContractModalOpen(false)}
           onSave={handleContractCreated}
-          existingCategories={[
-            ...new Set(
-              contracts
-                .map((c) => c.category)
-                .filter((c): c is string => !!c),
-            ),
-          ]}
+          existingCategories={categories}
         />
       )}
       {/* Modal de Edição de Etapa */}
@@ -1087,13 +1101,7 @@ export default function AdminDashboard() {
           contract={selectedContract}
           onClose={() => setIsEditContractModalOpen(false)}
           onSave={handleEditContract}
-          existingCategories={[
-            ...new Set(
-              contracts
-                .map((c) => c.category)
-                .filter((cat): cat is string => !!cat),
-            ),
-          ]}
+          existingCategories={categories}
         />
       )}
       {/* Modal de Análise do Vetto */}

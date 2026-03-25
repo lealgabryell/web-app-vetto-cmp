@@ -9,6 +9,7 @@ import {
   ContractAdminRequest,
   CreateContractRequest,
   NewContractModalProps,
+  TipoRecorrencia,
 } from "@/src/types/contracts";
 import Cookie from "js-cookie";
 import { decodeJwtPayload } from "@/lib/utils";
@@ -37,6 +38,14 @@ const agencyDigitChar = (v: string) =>
 const safeText = (v: string, maxLen: number) =>
   sanitizeText(v).slice(0, maxLen);
 // ─────────────────────────────────────────────────────────────────────────────
+
+const TIPOS_RECORRENCIA = [
+  { value: "MENSAL",    label: "Mensal" },
+  { value: "SEMANAL",   label: "Semanal" },
+  { value: "QUINZENAL", label: "Quinzenal" },
+  { value: "SEMESTRAL", label: "Semestral" },
+  { value: "ANUAL",     label: "Anual" },
+] as const;
 
 export default function NewContractModal({ onClose, onSave, existingCategories = [] }: NewContractModalProps) {
   const [selectedClient, setSelectedClient] = useState<User | null>(null);
@@ -116,6 +125,13 @@ export default function NewContractModal({ onClose, onSave, existingCategories =
     startDate: "",
     endDate: "",
     category: "",
+    recorrencia: false,
+    tipoRecorrencia: "" as TipoRecorrencia | "",
+    diaPagamento: undefined as number | undefined,
+    segundoDiaPagamento: undefined as number | undefined,
+    mesPagamento: undefined as number | undefined,
+    dataPagamentoAnual: "",
+    valorRecorrente: 0,
   });
 
   const [loading, setLoading] = useState(false);
@@ -222,12 +238,24 @@ export default function NewContractModal({ onClose, onSave, existingCategories =
     const contractRequest: CreateContractRequest = {
       title: formData.title,
       description: formData.description,
-      totalValue: formData.totalValue,
       startDate: formData.startDate,
       endDate: formData.endDate,
-      clientId: selectedClient?.id, // Pode ser undefined se for novo cliente
+      clientId: selectedClient?.id,
       category: formData.category || undefined,
       admins: selectedAdmins,
+      recorrencia: formData.recorrencia,
+      ...(formData.recorrencia
+        ? {
+            tipoRecorrencia: formData.tipoRecorrencia as TipoRecorrencia,
+            valorRecorrente: formData.valorRecorrente,
+            diaPagamento: ["MENSAL", "QUINZENAL", "SEMESTRAL", "SEMANAL"].includes(formData.tipoRecorrencia) ? formData.diaPagamento : undefined,
+            segundoDiaPagamento: formData.tipoRecorrencia === "QUINZENAL" ? formData.segundoDiaPagamento : undefined,
+            mesPagamento: formData.tipoRecorrencia === "SEMESTRAL" ? formData.mesPagamento : undefined,
+            dataPagamentoAnual: formData.tipoRecorrencia === "ANUAL" ? (formData.dataPagamentoAnual || undefined) : undefined,
+          }
+        : {
+            totalValue: formData.totalValue,
+          }),
     };
 
     // Chamamos a função que faz a mágica da sequência
@@ -264,17 +292,141 @@ export default function NewContractModal({ onClose, onSave, existingCategories =
               }
             />
 
-            <input
-              type="number"
-              placeholder="Valor Total (R$)"
-              required
-              min={0}
-              className="w-full text-zinc-700 p-2 border rounded-lg"
-              onChange={(e) => {
-                const val = Math.max(0, Number(e.target.value));
-                setFormData({ ...formData, totalValue: val });
-              }}
-            />
+            {/* Toggle de recorrência */}
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="w-4 h-4"
+                checked={formData.recorrencia}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    recorrencia: e.target.checked,
+                    totalValue: 0,
+                    tipoRecorrencia: "",
+                    valorRecorrente: 0,
+                    diaPagamento: undefined,
+                    segundoDiaPagamento: undefined,
+                    mesPagamento: undefined,
+                    dataPagamentoAnual: "",
+                  })
+                }
+              />
+              <span className="text-sm text-zinc-700">Contrato com recorrência (pagamento periódico)</span>
+            </label>
+
+            {/* Valor total OU campos de recorrência */}
+            {!formData.recorrencia ? (
+              <input
+                type="number"
+                placeholder="Valor Total (R$)"
+                required
+                min={0}
+                step="0.01"
+                className="w-full text-zinc-700 p-2 border rounded-lg"
+                value={formData.totalValue || ""}
+                onChange={(e) => {
+                  const val = Math.max(0, Number(e.target.value));
+                  setFormData({ ...formData, totalValue: val });
+                }}
+              />
+            ) : (
+              <div className="space-y-2">
+                <select
+                  required
+                  className="w-full text-zinc-700 p-2 border rounded-lg bg-white"
+                  value={formData.tipoRecorrencia}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      tipoRecorrencia: e.target.value as TipoRecorrencia | "",
+                      diaPagamento: undefined,
+                      segundoDiaPagamento: undefined,
+                      mesPagamento: undefined,
+                      dataPagamentoAnual: "",
+                    })
+                  }
+                >
+                  <option value="">Tipo de recorrência *</option>
+                  {TIPOS_RECORRENCIA.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  placeholder="Valor por ciclo (R$) *"
+                  required
+                  min={0}
+                  step="0.01"
+                  className="w-full text-zinc-700 p-2 border rounded-lg"
+                  value={formData.valorRecorrente || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, valorRecorrente: Math.max(0, Number(e.target.value)) })
+                  }
+                />
+
+                {/* MENSAL */}
+                {formData.tipoRecorrencia === "MENSAL" && (
+                  <input type="number" min={1} max={31} placeholder="Dia do pagamento (1–31) *" required
+                    className="w-full text-zinc-700 p-2 border rounded-lg text-sm"
+                    value={formData.diaPagamento ?? ""}
+                    onChange={(e) => setFormData({ ...formData, diaPagamento: Number(e.target.value) || undefined })} />
+                )}
+
+                {/* QUINZENAL */}
+                {formData.tipoRecorrencia === "QUINZENAL" && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="number" min={1} max={31} placeholder="1º dia do mês *" required
+                      className="text-zinc-700 p-2 border rounded-lg text-sm"
+                      value={formData.diaPagamento ?? ""}
+                      onChange={(e) => setFormData({ ...formData, diaPagamento: Number(e.target.value) || undefined })} />
+                    <input type="number" min={1} max={31} placeholder="2º dia do mês *" required
+                      className="text-zinc-700 p-2 border rounded-lg text-sm"
+                      value={formData.segundoDiaPagamento ?? ""}
+                      onChange={(e) => setFormData({ ...formData, segundoDiaPagamento: Number(e.target.value) || undefined })} />
+                  </div>
+                )}
+
+                {/* SEMESTRAL */}
+                {formData.tipoRecorrencia === "SEMESTRAL" && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="number" min={1} max={31} placeholder="Dia do pagamento (1–31) *" required
+                      className="text-zinc-700 p-2 border rounded-lg text-sm"
+                      value={formData.diaPagamento ?? ""}
+                      onChange={(e) => setFormData({ ...formData, diaPagamento: Number(e.target.value) || undefined })} />
+                    <select required className="text-zinc-700 p-2 border rounded-lg text-sm bg-white"
+                      value={formData.mesPagamento ?? ""}
+                      onChange={(e) => setFormData({ ...formData, mesPagamento: Number(e.target.value) || undefined })}>
+                      <option value="">Mês *</option>
+                      {["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"].map((m, i) => (
+                        <option key={i + 1} value={i + 1}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* ANUAL */}
+                {formData.tipoRecorrencia === "ANUAL" && (
+                  <input type="date" required
+                    className="w-full text-zinc-700 p-2 border rounded-lg text-sm"
+                    title="Data do próximo pagamento anual"
+                    value={formData.dataPagamentoAnual}
+                    onChange={(e) => setFormData({ ...formData, dataPagamentoAnual: e.target.value })} />
+                )}
+
+                {/* SEMANAL */}
+                {formData.tipoRecorrencia === "SEMANAL" && (
+                  <select required className="w-full text-zinc-700 p-2 border rounded-lg text-sm bg-white"
+                    value={formData.diaPagamento ?? ""}
+                    onChange={(e) => setFormData({ ...formData, diaPagamento: Number(e.target.value) || undefined })}>
+                    <option value="">Dia da semana *</option>
+                    {["Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado","Domingo"].map((d, i) => (
+                      <option key={i + 1} value={i + 1}>{d}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
 
             <div className="relative">
               <input

@@ -6,7 +6,8 @@ import { getCompanySections } from "@/src/services/companysections";
 import { User, UpdateUserRequest, Address } from "@/src/types/user";
 import { CompanySection, SectionRole } from "@/src/types/companysections";
 import toast from "react-hot-toast";
-import { UserCircle, Pencil, X, Save, Loader2, Building2 } from "lucide-react";
+import { UserCircle, Pencil, X, Save, Loader2, Building2, UserPlus } from "lucide-react";
+import NewUserAdminModal from "@/src/components/users/NewUserAdminModal";
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
@@ -15,6 +16,8 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [userId, setUserId] = useState<string>("");
   const [mySections, setMySections] = useState<{ section: CompanySection; role: SectionRole }[]>([]);
+  const [loadingSections, setLoadingSections] = useState(true);
+  const [showNewUserModal, setShowNewUserModal] = useState(false);
   const [form, setForm] = useState<UpdateUserRequest>({
     name: "",
     cpf: "",
@@ -34,17 +37,9 @@ export default function ProfilePage() {
   useEffect(() => {
     async function load() {
       try {
-        const [data, allSections] = await Promise.all([getCurrentUser(), getCompanySections()]);
+        const data = await getCurrentUser();
         setUser(data);
         setUserId(data.id);
-
-        const membership = allSections
-          .filter((s) => s.members.some((m) => m.userId === data.id))
-          .map((s) => ({
-            section: s,
-            role: s.members.find((m) => m.userId === data.id)!.role,
-          }));
-        setMySections(membership);
         setForm({
           name: data.name ?? "",
           cpf: data.cpf ?? "",
@@ -60,9 +55,23 @@ export default function ProfilePage() {
             zipCode: data.address?.zipCode ?? "",
           },
         });
+        setLoading(false);
+
+        // Carrega setores em segundo plano — não bloqueia a exibição do perfil
+        getCompanySections()
+          .then((allSections) => {
+            const membership = allSections
+              .filter((s) => s.members.some((m) => m.userId === data.id))
+              .map((s) => ({
+                section: s,
+                role: s.members.find((m) => m.userId === data.id)!.role,
+              }));
+            setMySections(membership);
+          })
+          .catch(() => {/* setores opcionais, falha silenciosa */})
+          .finally(() => setLoadingSections(false));
       } catch {
         toast.error("Erro ao carregar seus dados. Tente novamente.");
-      } finally {
         setLoading(false);
       }
     }
@@ -152,15 +161,32 @@ export default function ProfilePage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-8">
-        <div className="bg-blue-100 p-3 rounded-full">
-          <UserCircle size={32} className="text-blue-600" />
+      <div className="flex items-center justify-between gap-3 mb-8">
+        <div className="flex items-center gap-3">
+          <div className="bg-blue-100 p-3 rounded-full">
+            <UserCircle size={32} className="text-blue-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800">{user.name}</h1>
+            <p className="text-sm text-slate-500">{user.email}</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Meu Perfil</h1>
-          <p className="text-sm text-slate-500">{user.email}</p>
-        </div>
+        {user.role === "ADMIN" && user.director && (
+          <button
+            onClick={() => setShowNewUserModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition"
+          >
+            <UserPlus size={16} />
+            Criar novo perfil
+          </button>
+        )}
       </div>
+
+      {showNewUserModal && (
+        <NewUserAdminModal
+          onClose={() => setShowNewUserModal(false)}
+        />
+      )}
 
       <div className="space-y-6">
         {/* Dados Pessoais + Endereço (retrátil) */}
@@ -394,7 +420,12 @@ export default function ProfilePage() {
             <Building2 size={18} className="text-slate-500" />
             <h2 className="text-base font-semibold text-slate-700">Setores</h2>
           </div>
-          {mySections.length === 0 ? (
+          {loadingSections ? (
+            <div className="flex items-center gap-2 text-sm text-slate-400">
+              <Loader2 size={16} className="animate-spin" />
+              Carregando setores...
+            </div>
+          ) : mySections.length === 0 ? (
             <p className="text-sm text-slate-400">Você não pertence a nenhum setor.</p>
           ) : (
             <ul className="space-y-2">

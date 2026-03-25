@@ -214,7 +214,7 @@ export function SectionEditForm({
           </div>
 
           {memberSearchResults.length > 0 && (
-            <ul className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-md max-h-40 overflow-auto text-sm">
+            <ul className="absolute z-10 bottom-full mb-1 w-full bg-white border border-slate-200 rounded-lg shadow-md max-h-40 overflow-auto text-sm">
               {memberSearchResults.map((admin) => (
                 <li
                   key={admin.id}

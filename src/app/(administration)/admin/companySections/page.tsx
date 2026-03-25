@@ -13,18 +13,31 @@ import { SectionSearchBar } from "@/src/components/companySections/SectionSearch
 import { SectionCard } from "@/src/components/companySections/SectionCard";
 import { CreateSectionModal } from "@/src/components/companySections/CreateSectionModal";
 
+// ── Cache em módulo — persiste entre navegações na mesma sessão ──────────────
+interface SectionsCache {
+  mySections: SectionWithRole[];
+  contractCategories: string[];
+  myUserId: string;
+  isDirector: boolean;
+  allAdmins: User[];
+}
+let _sectionsCache: SectionsCache | null = null;
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function CompanySectionsPage() {
-  const [loading, setLoading] = useState(true);
-  const [mySections, setMySections] = useState<SectionWithRole[]>([]);
+  const [loading, setLoading] = useState(!_sectionsCache);
+  const [mySections, setMySections] = useState<SectionWithRole[]>(_sectionsCache?.mySections ?? []);
   const [togglingId, setTogglingId] = useState<string | null>(null);
-  const [myUserId, setMyUserId] = useState<string>("");
-  const [contractCategories, setContractCategories] = useState<string[]>([]);
+  const [myUserId, setMyUserId] = useState<string>(_sectionsCache?.myUserId ?? "");
+  const [contractCategories, setContractCategories] = useState<string[]>(_sectionsCache?.contractCategories ?? []);
   const [editing, setEditing] = useState<EditingState | null>(null);
-  const [isDirector, setIsDirector] = useState(false);
-  const [allAdmins, setAllAdmins] = useState<User[]>([]);
+  const [isDirector, setIsDirector] = useState(_sectionsCache?.isDirector ?? false);
+  const [allAdmins, setAllAdmins] = useState<User[]>(_sectionsCache?.allAdmins ?? []);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState<CreatingState>(defaultCreating);
-  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(
+    _sectionsCache ? new Set(_sectionsCache.mySections.map((sw) => sw.section.id)) : new Set()
+  );
   const [sectionSearch, setSectionSearch] = useState("");
 
   const toggleCollapse = (id: string) =>
@@ -44,24 +57,31 @@ export default function CompanySectionsPage() {
           getAdmins(),
         ]);
 
-        setMyUserId(me.id);
-        setIsDirector(me.director);
-        setAllAdmins(admins);
-
         const filtered = allSections
           .filter((s) => s.members.some((m) => m.userId === me.id))
           .map((s) => ({
             section: s,
             myRole: s.members.find((m) => m.userId === me.id)!.role,
           }));
-        setMySections(filtered);
-        setCollapsedSections(new Set(filtered.map((sw) => sw.section.id)));
 
-        // Merge backend distinct categories with every section's categoriesPermitted
-        // so previously permitted categories remain available even without contracts.
         const fromSections = allSections.flatMap((s) => s.categoriesPermitted);
         const cats = Array.from(new Set([...distinctCategories, ...fromSections])).sort();
+
+        setMyUserId(me.id);
+        setIsDirector(me.director);
+        setAllAdmins(admins);
+        setMySections(filtered);
+        setCollapsedSections(new Set(filtered.map((sw) => sw.section.id)));
         setContractCategories(cats);
+
+        // Grava cache imediatamente após o carregamento
+        _sectionsCache = {
+          mySections: filtered,
+          contractCategories: cats,
+          myUserId: me.id,
+          isDirector: me.director,
+          allAdmins: admins,
+        };
       } catch {
         toast.error("Erro ao carregar os setores. Tente novamente.");
       } finally {
