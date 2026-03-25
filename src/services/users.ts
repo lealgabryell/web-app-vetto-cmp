@@ -1,9 +1,8 @@
 import { api } from "./api";
-import { User, FinancialDetails, UpdateUserRequest } from "../types/user";
+import { User, FinancialDetails, UpdateUserRequest, CreateUserRequest } from "../types/user";
 import axios from "axios";
 
-export const createUser = async (userData: Partial<User>): Promise<User> => {
-  // Omitimos o 'id' e 'active' pois o back-end gera
+export const createUser = async (userData: CreateUserRequest): Promise<User> => {
   const { data } = await api.post<User>("/api/users", userData);
   return data;
 };

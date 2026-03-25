@@ -1,19 +1,26 @@
 import React from 'react';
 import { History, UserPen, DollarSign, CheckCircle2 } from 'lucide-react';
-import { ContractHistoryResponse } from '../../types/contracts';
+import { ContractHistoryResponse, TipoRecorrencia } from '../../types/contracts';
 
 interface ContractSnapshotsProps {
   currentTitle: string;
-  currentValue: number;
+  currentValue: number | null;
+  currentRecorrencia?: boolean | null;
+  currentTipoRecorrencia?: TipoRecorrencia | null;
+  currentValorRecorrente?: number | null;
   snapshots: ContractHistoryResponse[];
 }
 
 export const ContractSnapshots: React.FC<ContractSnapshotsProps> = ({ 
   currentTitle, 
-  currentValue, 
+  currentValue,
+  currentRecorrencia,
+  currentTipoRecorrencia,
+  currentValorRecorrente,
   snapshots 
 }) => {
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number | null | undefined) => {
+    if (value == null) return "—";
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
 
@@ -47,7 +54,10 @@ export const ContractSnapshots: React.FC<ContractSnapshotsProps> = ({
                       <span className="text-xs font-medium text-green-600">Ativo</span>
                    </div>
                    <p className="text-sm font-bold text-slate-900 mt-1">{currentTitle}</p>
-                   <p className="text-sm text-green-700 font-semibold">{formatCurrency(currentValue)}</p>
+                   {currentRecorrencia
+                     ? <p className="text-sm text-green-700 font-semibold">{formatCurrency(currentValorRecorrente)} / ciclo · {currentTipoRecorrencia}</p>
+                     : <p className="text-sm text-green-700 font-semibold">{formatCurrency(currentValue)}</p>
+                   }
                 </div>
               </div>
             </div>
@@ -82,7 +92,10 @@ export const ContractSnapshots: React.FC<ContractSnapshotsProps> = ({
                     <div className="mt-3 flex justify-between items-center border-t pt-2 border-slate-50">
                       <div className="flex items-center gap-1 text-slate-600">
                         <DollarSign size={12} />
-                        <span className="text-xs font-medium">{formatCurrency(item.totalValue)}</span>
+                        {item.recorrencia
+                          ? <span className="text-xs font-medium">{formatCurrency(item.valorRecorrente)} / ciclo · {item.tipoRecorrencia}</span>
+                          : <span className="text-xs font-medium">{formatCurrency(item.totalValue)}</span>
+                        }
                       </div>
                       <span className="text-[10px] text-slate-400">
                         Modificado por: <span className="font-medium text-slate-600">{item.modifiedBy}</span>
