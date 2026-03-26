@@ -30,6 +30,7 @@ export interface CompanySection {
 export interface CreateCompanySectionRequest {
   name: string;
   categoriesPermitted: string[];
+  members?: AddMemberRequest[];
 }
 
 export interface UpdateCompanySectionRequest {

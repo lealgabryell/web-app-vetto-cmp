@@ -64,3 +64,17 @@ export interface UpdateUserRequest {
   financialDetails?: FinancialDetailsRequest;
   director?: boolean;
 }
+
+export interface CreateUserRequest {
+  name: string;
+  email: string;
+  password: string;
+  cpf: string;
+  phone?: string;
+  /** ISO date YYYY-MM-DD */
+  birthDate?: string;
+  role: "ADMIN" | "CLIENT";
+  address?: Address;
+  financialDetails?: FinancialDetailsRequest;
+  director?: boolean;
+}

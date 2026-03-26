@@ -5,6 +5,13 @@ export type ContractStatus =
   | "FINISHED"
   | "CANCELED";
 
+export type TipoRecorrencia =
+  | "MENSAL"
+  | "SEMANAL"
+  | "QUINZENAL"
+  | "SEMESTRAL"
+  | "ANUAL";
+
 export type EtapaStatus =
   | "PROGRAMADA"
   | "EM_ANDAMENTO"
@@ -18,15 +25,22 @@ export interface UserSummary {
   email: string;
 }
 
+/** Approver with individual approval status */
+export interface AprovadorStatus extends UserSummary {
+  aprovado: boolean;
+  aprovadoEm: string | null; // ISO 8601 or null
+}
+
 /** Full DTO returned by every step endpoint (GET / POST / PUT) */
 export interface ContractStepResponse {
   id: string;
   titulo: string;
+  instrucao: string | null;     // optional orientation text
   dataInicio: string;           // "YYYY-MM-DD"
   previsaoConclusao: string;    // "YYYY-MM-DD"
   status: EtapaStatus;
   responsaveis: UserSummary[];  // may be []
-  aprovadores: UserSummary[];   // may be []
+  aprovadores: AprovadorStatus[]; // may be []
   pdfUrls: string[];
 }
 
@@ -52,7 +66,7 @@ export interface ContractResponse {
   title: string;
   description: string;
   status: ContractStatus;
-  totalValue: number;
+  totalValue: number | null;
   startDate: string;
   endDate: string;
   clientId: string;
@@ -65,6 +79,17 @@ export interface ContractResponse {
   aiAnalysisSummary?: string;
   autoExtracted: boolean;
   keyClauses: string[];
+  recorrencia: boolean | null;
+  tipoRecorrencia: TipoRecorrencia | null;
+  /** MENSAL/QUINZENAL/SEMESTRAL: dia do mês (1-31) | SEMANAL: dia da semana (1-7) */
+  diaPagamento: number | null;
+  /** QUINZENAL apenas: 2º dia do mês (1-31) */
+  segundoDiaPagamento: number | null;
+  /** SEMESTRAL apenas: mês do pagamento (1-12) */
+  mesPagamento: number | null;
+  /** ANUAL apenas: data completa 'YYYY-MM-DD' */
+  dataPagamentoAnual: string | null;
+  valorRecorrente: number | null;
   admins: ContractAdminResponse[];
   steps: ContractStepResponse[];
 }
@@ -72,6 +97,7 @@ export interface ContractResponse {
 /** POST /api/contracts/:contractId/steps */
 export interface CreateContractStepRequest {
   titulo: string;              // obrigatório
+  instrucao?: string | null;   // opcional
   dataInicio: string;          // "YYYY-MM-DD"
   expectedEndDate: string;     // "YYYY-MM-DD"
   status: EtapaStatus;
@@ -92,7 +118,7 @@ export interface Address {
 export interface UpdateContractRequest {
   title: string;
   description: string;
-  totalValue: number;
+  totalValue?: number;
   startDate: string; // YYYY-MM-DD
   endDate: string; // YYYY-MM-DD
   status: ContractStatus;
@@ -103,15 +129,29 @@ export interface UpdateContractRequest {
   aiAnalysisSummary?: string;
   autoExtracted?: boolean;
   keyClauses: string[];
+  recorrencia?: boolean;
+  tipoRecorrencia?: TipoRecorrencia;
+  diaPagamento?: number;
+  segundoDiaPagamento?: number;
+  mesPagamento?: number;
+  dataPagamentoAnual?: string;
+  valorRecorrente?: number;
 }
 
 export interface UpdatedContractResponse {
   id: string;
   title: string;
   status: string;
-  totalValue: number;
-  startDate: string;
-  endDate: string;
+  totalValue: number | null;
+  startDate: string | null;
+  endDate: string | null;
+  recorrencia: boolean | null;
+  tipoRecorrencia: TipoRecorrencia | null;
+  diaPagamento: number | null;
+  segundoDiaPagamento: number | null;
+  mesPagamento: number | null;
+  dataPagamentoAnual: string | null;
+  valorRecorrente: number | null;
   scannedContractUrl?: string;
   finalProjectUrl?: string;
   message: string;
@@ -120,7 +160,7 @@ export interface UpdatedContractResponse {
 export interface CreateContractRequest {
   title: string;
   description?: string;
-  totalValue: number;
+  totalValue?: number;
   startDate?: string;
   endDate?: string;
   clientId?: string;
@@ -128,6 +168,13 @@ export interface CreateContractRequest {
   clientEmail?: string;
   category?: string;
   admins: ContractAdminRequest[];
+  recorrencia?: boolean;
+  tipoRecorrencia?: TipoRecorrencia;
+  diaPagamento?: number;
+  segundoDiaPagamento?: number;
+  mesPagamento?: number;
+  dataPagamentoAnual?: string;
+  valorRecorrente?: number;
 }
 
 export interface NewContractModalProps {
@@ -139,6 +186,7 @@ export interface NewContractModalProps {
 /** PUT /api/contracts/:contractId/steps/:stepId */
 export interface UpdateContractStepRequest {
   titulo: string;                   // obrigatório
+  instrucao?: string | null;        // opcional
   dataInicio: string;               // "YYYY-MM-DD"
   previsaoConclusao: string;        // "YYYY-MM-DD"
   responsavelIds?: string[];        // substitui lista inteira
@@ -150,7 +198,14 @@ export interface ContractHistoryResponse {
   id: string;
   title: string;
   description: string;
-  totalValue: number;
+  totalValue: number | null;
+  recorrencia: boolean | null;
+  tipoRecorrencia: TipoRecorrencia | null;
+  diaPagamento: number | null;
+  segundoDiaPagamento: number | null;
+  mesPagamento: number | null;
+  dataPagamentoAnual: string | null;
+  valorRecorrente: number | null;
   status: ContractStatus;
   category?: string;
   aiRiskScore?: number;
