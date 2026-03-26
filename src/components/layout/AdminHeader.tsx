@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Calendar, UserCircle, LogOut } from 'lucide-react';
+import { LayoutDashboard, Calendar, UserCircle, Building2, LogOut } from 'lucide-react';
 import Cookie from 'js-cookie';
+import { NotificationBell } from '../notifications/NotificationBell';
 
 export default function AdminHeader() {
   const pathname = usePathname();
@@ -17,7 +18,8 @@ export default function AdminHeader() {
   const navItems = [
     { name: 'Contratos', href: '/admin', icon: LayoutDashboard },
     { name: 'Agenda', href: '/admin/agenda', icon: Calendar },
-    { name: 'Meu Perfil', href: '/admin/perfil', icon: UserCircle },
+    { name: 'Setores', href: '/admin/companySections', icon: Building2 },
+    { name: 'Meu Perfil', href: '/admin/profile', icon: UserCircle },
   ];
 
   return (
@@ -55,8 +57,9 @@ export default function AdminHeader() {
             })}
           </nav>
 
-          {/* Botão de Logout */}
-          <div className="flex items-center">
+          {/* Sino de Notificações + Botão de Logout */}
+          <div className="flex items-center gap-6">
+            <NotificationBell />
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 text-slate-500 hover:text-red-600 transition-colors text-sm font-medium group"

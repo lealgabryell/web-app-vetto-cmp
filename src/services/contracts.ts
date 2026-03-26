@@ -70,6 +70,14 @@ export const updateStepData = async (
   return data;
 };
 
+/** PATCH /api/contracts/:contractId/steps/:stepId/approve — registers the logged user's approval */
+export const approveStep = async (
+  contractId: string,
+  stepId: string,
+): Promise<void> => {
+  await api.patch(`/api/contracts/${contractId}/steps/${stepId}/approve`);
+};
+
 export const updateContract = async (
   contractId: string,
   contractData: UpdateContractRequest,
@@ -98,6 +106,11 @@ export const uploadContractPDF = async (
   return response.data;
 };
 
+
+export const getDistinctCategories = async (): Promise<string[]> => {
+  const { data } = await api.get<string[]>("/api/contracts/categories");
+  return data;
+};
 
 export const getContractHistory = async (contractId: string): Promise<ContractHistoryResponse[]> => {
   const response = await api.get<ContractHistoryResponse[]>(`/api/contracts/${contractId}/history`);

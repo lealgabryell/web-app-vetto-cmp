@@ -5,21 +5,48 @@ import { ContractStepResponse, EtapaStatus } from "../../types/contracts";
 
 export interface StepItemProps {
   etapa: ContractStepResponse;
+  contractId: string;
+  loggedUserId?: string;
   isAdmin?: boolean;
   onStatusChange?: (newStatus: EtapaStatus) => void;
   onEdit?: (etapa: ContractStepResponse) => void;
   onUploadPdf?: (file: File) => Promise<void>;
+  onApprove?: (stepId: string) => void;
+  onRequestApproval?: (stepId: string) => void;
 }
 
 export default function StepItem({
   etapa,
+  contractId,
+  loggedUserId,
   isAdmin = false,
   onStatusChange,
   onEdit,
   onUploadPdf,
+  onApprove,
+  onRequestApproval,
 }: StepItemProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [approving, setApproving] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const [approvalRequested, setApprovalRequested] = useState(false);
+
+  // Detect if the logged user is a pending approver
+  const myApproval = loggedUserId
+    ? etapa.aprovadores.find((a) => a.id === loggedUserId)
+    : undefined;
+  const canApprove = !!myApproval && !myApproval.aprovado;
+
+  // Detect if the logged user is a responsavel and there are pending approvers
+  const isResponsavel = loggedUserId
+    ? etapa.responsaveis.some((r) => r.id === loggedUserId)
+    : false;
+  const isAprovador = loggedUserId
+    ? etapa.aprovadores.some((a) => a.id === loggedUserId)
+    : false;
+  const hasPendingApprovers = etapa.aprovadores.some((a) => !a.aprovado);
+  const canRequestApproval = isResponsavel && !isAprovador && hasPendingApprovers;
   const statusConfig = {
     PROGRAMADA: {
       label: "Programada",
@@ -49,6 +76,27 @@ export default function StepItem({
       setUploading(false);
       // Reset input so the same file can be re-selected if needed
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!onApprove) return;
+    setApproving(true);
+    try {
+      await onApprove(etapa.id);
+    } finally {
+      setApproving(false);
+    }
+  };
+
+  const handleRequestApproval = async () => {
+    if (!onRequestApproval) return;
+    setRequesting(true);
+    try {
+      await onRequestApproval(etapa.id);
+      setApprovalRequested(true);
+    } finally {
+      setRequesting(false);
     }
   };
 
@@ -83,13 +131,18 @@ export default function StepItem({
               {etapa.aprovadores.length === 0 ? (
                 <span className="text-[10px] text-slate-400 italic">Não atribuído</span>
               ) : (
-                etapa.aprovadores.map((u) => (
+                etapa.aprovadores.map((a) => (
                   <span
-                    key={u.id}
-                    title={u.email}
-                    className="text-[10px] font-medium bg-white/70 border border-current/20 rounded-full px-2 py-0.5"
+                    key={a.id}
+                    title={a.aprovado ? `Aprovado em ${new Date(a.aprovadoEm!).toLocaleString('pt-BR')}` : 'Aguardando aprovação'}
+                    className="text-[10px] font-medium bg-white/70 border border-current/20 rounded-full px-2 py-0.5 flex items-center gap-1"
                   >
-                    {u.name}
+                    {a.aprovado ? '\u2705' : '\u2B1C'} {a.name}
+                    {a.aprovadoEm && (
+                      <span className="text-gray-400 ml-1">
+                        {new Date(a.aprovadoEm).toLocaleDateString('pt-BR')}
+                      </span>
+                    )}
                   </span>
                 ))
               )}
@@ -161,6 +214,40 @@ export default function StepItem({
           )}
         </div>
       </div>
+
+      {/* Instrução */}
+      {etapa.instrucao && (
+        <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+          <span className="font-semibold">📋 Instrução: </span>
+          {etapa.instrucao}
+        </div>
+      )}
+
+      {/* Botão de aprovação */}
+      {canApprove && onApprove && (
+        <div className="mt-3">
+          <button
+            onClick={handleApprove}
+            disabled={approving}
+            className="w-full py-1.5 text-xs font-bold bg-green-600 hover:bg-green-700 text-white rounded-lg transition disabled:opacity-50"
+          >
+            {approving ? 'Registrando...' : '✓ Aprovar esta etapa'}
+          </button>
+        </div>
+      )}
+
+      {/* Botão de pedir aprovação */}
+      {canRequestApproval && onRequestApproval && (
+        <div className="mt-3">
+          <button
+            onClick={handleRequestApproval}
+            disabled={requesting || approvalRequested}
+            className="w-full py-1.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {requesting ? 'Enviando...' : approvalRequested ? '✔ Pedido enviado' : '🔔 Pedir aprovação da etapa'}
+          </button>
+        </div>
+      )}
 
       {/* Lista de PDFs anexados */}
       {etapa.pdfUrls && etapa.pdfUrls.length > 0 && (

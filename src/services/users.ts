@@ -1,9 +1,8 @@
 import { api } from "./api";
-import { User, FinancialDetails, UpdateUserRequest } from "../types/user";
+import { User, FinancialDetails, UpdateUserRequest, CreateUserRequest } from "../types/user";
 import axios from "axios";
 
-export const createUser = async (userData: Partial<User>): Promise<User> => {
-  // Omitimos o 'id' e 'active' pois o back-end gera
+export const createUser = async (userData: CreateUserRequest): Promise<User> => {
   const { data } = await api.post<User>("/api/users", userData);
   return data;
 };
@@ -52,6 +51,11 @@ export const linkFinancialDetails = async (
   await updateUserFinancialDetails(userId, details.id);
 };
 
+export const getCurrentUser = async (): Promise<User> => {
+  const { data } = await api.get<User>("/api/users/me");
+  return data;
+};
+
 export const getUserById = async (id: string): Promise<User> => {
   const { data } = await api.get<User>(`/api/users/${id}`);
   return data;
@@ -60,6 +64,10 @@ export const getUserById = async (id: string): Promise<User> => {
 export const updateUser = async (userId: string, data: UpdateUserRequest): Promise<User> => {
   const { data: updated } = await api.put<User>(`/api/users/${userId}`, data);
   return updated;
+};
+
+export const deactivateUser = async (userId: string): Promise<void> => {
+  await api.patch(`/api/users/${userId}/deactivate`);
 };
 
 export const patchFinancialDetails = async (
