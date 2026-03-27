@@ -81,7 +81,7 @@ export default function ClientDashboard() {
                       {new Intl.NumberFormat("pt-BR", {
                         style: "currency",
                         currency: "BRL",
-                      }).format(contract.totalValue)}
+                      }).format(contract.totalValue ?? 0)}
                     </p>
                   </div>
                 </div>

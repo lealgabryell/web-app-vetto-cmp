@@ -56,6 +56,7 @@ export function SectionMemberItem({
               onClick={onRemove}
               disabled={isToggling}
               title="Remover do setor"
+              data-test-id={`btn-remove-member-${member.userId}`}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-200 disabled:opacity-60"
             >
               {isToggling ? <Loader2 size={13} className="animate-spin" /> : <UserX size={13} />}
@@ -68,6 +69,7 @@ export function SectionMemberItem({
               onClick={onDeactivate}
               disabled={isToggling || isInactive}
               title={isInactive ? "Usuário já desativado" : "Desativar no sistema"}
+              data-test-id={`btn-deactivate-member-${member.userId}`}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition
                 ${
                   isInactive
