@@ -332,6 +332,7 @@ export default function CompanySectionsPage() {
               setCreating({ ...defaultCreating, members: directorMembers });
               setShowCreateModal(true);
             }}
+            data-test-id="btn-create-section"
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition"
           >
             <Plus size={16} />
