@@ -38,6 +38,7 @@ export function CreateSectionModal({
           <button
             onClick={onClose}
             disabled={creating.saving}
+            data-test-id="btn-close-create-section-modal"
             className="text-slate-400 hover:text-slate-600 transition"
           >
             <X size={18} />
@@ -54,6 +55,7 @@ export function CreateSectionModal({
             <input
               type="text"
               placeholder="Ex: ENGENHARIA CIVIL"
+              data-test-id="input-create-section-name"
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono tracking-wide text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
               value={creating.name}
               onChange={(e) => setCreating((p) => ({ ...p, name: sanitizeSectionName(e.target.value) }))}
@@ -79,6 +81,7 @@ export function CreateSectionModal({
                       setCreating((p) => ({ ...p, categories: p.categories.filter((c) => c !== cat) }))
                     }
                     disabled={creating.saving}
+                    data-test-id={`btn-remove-new-category-${cat}`}
                     className="hover:text-blue-900 transition"
                   >
                     <Trash2 size={11} />
@@ -92,8 +95,7 @@ export function CreateSectionModal({
             <div className="relative">
               <input
                 type="text"
-                placeholder="Pesquisar categoria existente..."
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition uppercase placeholder:normal-case"
+                placeholder="Pesquisar categoria existente..."              data-test-id="input-create-category-search"                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition uppercase placeholder:normal-case"
                 value={creating.categoryInput}
                 onChange={(e) => setCreating((p) => ({ ...p, categoryInput: e.target.value.toUpperCase() }))}
                 disabled={creating.saving}
@@ -104,6 +106,7 @@ export function CreateSectionModal({
                     <li
                       key={cat}
                       className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-slate-700 font-mono"
+                      data-test-id={`btn-select-new-category-${cat}`}
                       onClick={() =>
                         setCreating((p) => ({ ...p, categories: [...p.categories, cat], categoryInput: "" }))
                       }
@@ -152,6 +155,7 @@ export function CreateSectionModal({
                           <>
                             <select
                               value={m.role}
+                              data-test-id={`select-new-member-role-${m.userId}`}
                               onChange={(e) =>
                                 setCreating((p) => ({
                                   ...p,
@@ -176,6 +180,7 @@ export function CreateSectionModal({
                                 }))
                               }
                               disabled={creating.saving}
+                              data-test-id={`btn-remove-new-member-${m.userId}`}
                               className="text-slate-400 hover:text-red-500 transition"
                             >
                               <X size={14} />
@@ -191,8 +196,7 @@ export function CreateSectionModal({
             <div className="relative">
               <input
                 type="text"
-                placeholder="Buscar usuário pelo nome..."
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                placeholder="Buscar usuário pelo nome..."              data-test-id="input-create-member-search"                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                 value={creating.memberSearch}
                 onChange={(e) => setCreating((p) => ({ ...p, memberSearch: e.target.value }))}
                 disabled={creating.saving}
@@ -203,6 +207,7 @@ export function CreateSectionModal({
                     <li
                       key={admin.id}
                       className="flex items-center justify-between px-3 py-2 hover:bg-blue-50 cursor-pointer"
+                      data-test-id={`btn-add-new-member-${admin.id}`}
                       onClick={() =>
                         setCreating((p) => ({
                           ...p,
@@ -229,6 +234,7 @@ export function CreateSectionModal({
           <button
             onClick={onClose}
             disabled={creating.saving}
+            data-test-id="btn-cancel-create-section"
             className="px-4 py-2 rounded-lg border border-slate-300 text-sm text-slate-600 hover:bg-slate-100 transition disabled:opacity-50"
           >
             Cancelar
@@ -236,6 +242,7 @@ export function CreateSectionModal({
           <button
             onClick={onCreate}
             disabled={creating.saving || !creating.name.trim()}
+            data-test-id="btn-confirm-create-section"
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition disabled:opacity-50"
           >
             {creating.saving ? (

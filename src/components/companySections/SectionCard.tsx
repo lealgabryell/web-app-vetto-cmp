@@ -85,6 +85,7 @@ export function SectionCard({
           {myRole === "LEADER" && !isEditingThis && (
             <button
               onClick={onOpenEdit}
+              data-test-id={`btn-edit-section-${section.id}`}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 text-xs font-medium transition"
             >
               <Pencil size={13} />
@@ -97,6 +98,7 @@ export function SectionCard({
               <button
                 onClick={onCloseEdit}
                 disabled={editing?.saving}
+                data-test-id="btn-cancel-edit-section"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 text-xs font-medium transition disabled:opacity-50"
               >
                 <X size={13} />
@@ -105,6 +107,7 @@ export function SectionCard({
               <button
                 onClick={onSaveEdit}
                 disabled={editing?.saving}
+                data-test-id="btn-save-edit-section"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition disabled:opacity-50"
               >
                 {editing?.saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
@@ -115,6 +118,7 @@ export function SectionCard({
 
           <button
             onClick={onToggleCollapse}
+            data-test-id={`btn-toggle-section-${section.id}`}
             className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 text-xs transition"
             title={collapsed ? "Expandir membros" : "Recolher membros"}
           >

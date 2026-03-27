@@ -46,6 +46,7 @@ export function SectionEditForm({
         <label className="block text-xs font-medium text-slate-500 mb-1">Nome do setor</label>
         <input
           type="text"
+          data-test-id="input-edit-section-name"
           className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
           value={editing.name}
           onChange={(e) => setEditing((prev) => prev && { ...prev, name: e.target.value })}
@@ -66,6 +67,7 @@ export function SectionEditForm({
               {cat}
               <button
                 onClick={() => onRemoveCategory(cat)}
+                data-test-id={`btn-remove-category-${cat}`}
                 disabled={editing.saving}
                 className="hover:text-blue-900 transition"
               >
@@ -83,6 +85,7 @@ export function SectionEditForm({
             <input
               type="text"
               placeholder="Digite uma categoria existente..."
+              data-test-id="input-edit-category"
               className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition uppercase placeholder:normal-case"
               value={editing.categoryInput}
               onChange={(e) =>
@@ -94,6 +97,7 @@ export function SectionEditForm({
             <button
               onClick={onAddCategory}
               disabled={editing.saving || !editing.categoryInput.trim()}
+              data-test-id="btn-add-category"
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-800 text-white text-xs font-medium transition disabled:opacity-40"
             >
               <Plus size={14} />
@@ -151,6 +155,7 @@ export function SectionEditForm({
                   <div className="flex items-center gap-2">
                     <select
                       value={m.role}
+                      data-test-id={`select-staged-member-role-${m.userId}`}
                       onChange={(e) =>
                         setEditing((prev) =>
                           prev && {
@@ -179,6 +184,7 @@ export function SectionEditForm({
                         )
                       }
                       disabled={editing.saving}
+                      data-test-id={`btn-remove-staged-member-${m.userId}`}
                       className="text-slate-400 hover:text-red-500 transition"
                     >
                       <X size={14} />
@@ -195,6 +201,7 @@ export function SectionEditForm({
             <input
               type="text"
               placeholder="Buscar usuário pelo nome..."
+              data-test-id="input-edit-member-search"
               className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
               value={editing.memberSearch}
               onChange={(e) => setEditing((prev) => prev && { ...prev, memberSearch: e.target.value })}
@@ -202,6 +209,7 @@ export function SectionEditForm({
             />
             <select
               value={editing.addingMemberRole}
+              data-test-id="select-adding-member-role"
               onChange={(e) =>
                 setEditing((prev) => prev && { ...prev, addingMemberRole: e.target.value as SectionRole })
               }
@@ -218,6 +226,7 @@ export function SectionEditForm({
               {memberSearchResults.map((admin) => (
                 <li
                   key={admin.id}
+                  data-test-id={`btn-add-member-${admin.id}`}
                   className="flex items-center justify-between px-3 py-2 hover:bg-blue-50 cursor-pointer"
                   onClick={() => onAddMember(admin.id)}
                 >

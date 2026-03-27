@@ -656,6 +656,7 @@ export default function AdminDashboard() {
         </div>
         <button
           onClick={() => setIsNewContractModalOpen(true)}
+          data-test-id="btn-new-contract"
           className="bg-blue-600 hover:bg-blue-700 text-white font-normal py-1.5 px-3 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center gap-2"
         >
           <span className="text-xl">+</span> Novo Contrato
@@ -672,6 +673,7 @@ export default function AdminDashboard() {
             <input
               type="text"
               placeholder="Buscar por contrato ou cliente..."
+              data-test-id="input-contract-search"
               className="w-full text-black pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-white shadow-sm text-sm"
               value={contractSearch}
               onChange={(e) => setContractSearch(e.target.value)}
@@ -680,6 +682,7 @@ export default function AdminDashboard() {
 
           {/* Filtro por Status */}
           <select
+            data-test-id="select-contract-status-filter"
             className="px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none bg-white shadow-sm text-sm font-medium text-slate-700 cursor-pointer"
             value={contractStatusFilter}
             onChange={(e) => setContractStatusFilter(e.target.value)}
@@ -708,6 +711,7 @@ export default function AdminDashboard() {
                 setContractSearch("");
                 setContractStatusFilter("ALL");
               }}
+              data-test-id="btn-clear-contract-filters"
               className="text-xs text-blue-600 hover:text-blue-800 font-semibold"
             >
               Limpar filtros
@@ -730,6 +734,7 @@ export default function AdminDashboard() {
               {/* Cabeçalho do bloco */}
               <button
                 onClick={() => toggleCategory(category)}
+                data-test-id={`btn-toggle-category-${category}`}
                 className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between w-full text-left"
               >
                 <div className="flex items-center gap-2 min-w-0">
@@ -801,6 +806,7 @@ export default function AdminDashboard() {
                       />
                       <button
                         onClick={() => setIsEditContractModalOpen(true)}
+                        data-test-id="btn-edit-contract"
                         className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                         title="Editar informações do contrato"
                       >
@@ -839,6 +845,7 @@ export default function AdminDashboard() {
                         <button
                           type="button"
                           onClick={() => handleOpenClientDetails(selectedContract.clientId, selectedContract)}
+                          data-test-id="btn-open-client-details"
                           className="font-bold text-blue-600 hover:text-blue-800 hover:underline text-sm text-left block"
                         >
                           {selectedContract.clientName}
@@ -865,12 +872,14 @@ export default function AdminDashboard() {
                           setShowSteps(true);
                           loadSteps(selectedContract.id);
                         }}
+                        data-test-id="btn-manage-steps"
                         className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700"
                       >
                         Gerenciar Etapas
                       </button>
                       <button
                         onClick={() => setShowCancelConfirm(true)}
+                        data-test-id="btn-cancel-contract"
                         className="px-6 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl"
                       >
                         Cancelar Contrato
@@ -886,12 +895,14 @@ export default function AdminDashboard() {
                         <div className="flex gap-2">
                           <button
                             onClick={async () => { await handleCancel(); setShowCancelConfirm(false); }}
+                            data-test-id="btn-confirm-cancel-contract"
                             className="flex-1 py-2 text-xs font-bold bg-red-600 hover:bg-red-700 text-white rounded-lg transition"
                           >
                             Sim, cancelar
                           </button>
                           <button
                             onClick={() => setShowCancelConfirm(false)}
+                            data-test-id="btn-dismiss-cancel-contract"
                             className="flex-1 py-2 text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg transition"
                           >
                             Não, voltar
@@ -926,6 +937,7 @@ export default function AdminDashboard() {
                         <button
                           type="button"
                           onClick={() => handleOpenClientDetails(selectedContract.clientId, selectedContract)}
+                          data-test-id="btn-open-client-details-member"
                           className="font-bold text-blue-600 hover:text-blue-800 hover:underline text-sm text-left block"
                         >
                           {selectedContract.clientName}
@@ -958,6 +970,7 @@ export default function AdminDashboard() {
                 <div>
                   <button
                     onClick={() => setShowSteps(false)}
+                    data-test-id="btn-back-to-contract-details"
                     className="text-blue-600 text-sm mb-4"
                   >
                     ← Voltar aos detalhes
@@ -968,6 +981,7 @@ export default function AdminDashboard() {
                     </h2>
                     <button
                       onClick={() => setIsNewStepModalOpen(true)}
+                      data-test-id="btn-new-step"
                       className="bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition"
                     >
                       + Nova Etapa
@@ -979,6 +993,7 @@ export default function AdminDashboard() {
                       <input
                         type="text"
                         placeholder="Filtrar por título da etapa..."
+                        data-test-id="input-step-search"
                         className="w-full text-black pl-3 pr-3 py-2 text-xs border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                         value={stepSearch}
                         onChange={(e) => setStepSearch(e.target.value)}
@@ -987,6 +1002,7 @@ export default function AdminDashboard() {
 
                     {/* Filtro por Status */}
                     <select
+                      data-test-id="select-step-status-filter"
                       className="text-xs p-2 border rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-600"
                       value={stepStatusFilter}
                       onChange={(e) =>
@@ -1052,6 +1068,7 @@ export default function AdminDashboard() {
                               setStepSearch("");
                               setStepStatusFilter("ALL");
                             }}
+                            data-test-id="btn-clear-step-filters"
                             className="text-blue-600 text-xs mt-2 underline"
                           >
                             Limpar filtros
@@ -1069,6 +1086,7 @@ export default function AdminDashboard() {
                   setShowSteps(false);
                   setShowCancelConfirm(false);
                 }}
+                data-test-id="btn-close-contract-modal"
                 className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
               >
                 Fechar
@@ -1133,6 +1151,7 @@ export default function AdminDashboard() {
                   setClientDetailsOpen(false);
                   setClientDetailsUser(null);
                 }}
+                data-test-id="btn-close-client-details"
                 className="text-slate-400 hover:text-slate-600 text-lg font-bold"
               >
                 ✕
@@ -1195,6 +1214,7 @@ export default function AdminDashboard() {
                   <button
                     type="button"
                     onClick={() => setFinancialEditOpen(true)}
+                    data-test-id="btn-edit-financial"
                     className="mt-4 w-full py-2 text-xs font-semibold border border-blue-200 text-blue-600 hover:bg-blue-50 rounded-lg transition"
                   >
                     {clientDetailsUser?.financialDetails ? "✏️ Editar dados financeiros" : "➕ Adicionar dados financeiros"}
@@ -1209,6 +1229,7 @@ export default function AdminDashboard() {
                     <div className="grid grid-cols-2 gap-2">
                       <input
                         placeholder="Cód. Banco"
+                        data-test-id="input-bank-code"
                         className="p-2 text-xs border rounded text-zinc-700"
                         value={financialFormData.bankCode ?? ""}
                         maxLength={4}
@@ -1216,6 +1237,7 @@ export default function AdminDashboard() {
                       />
                       <input
                         placeholder="Nome do Banco"
+                        data-test-id="input-bank-name"
                         className="p-2 text-xs border rounded text-zinc-700"
                         value={financialFormData.bankName ?? ""}
                         maxLength={60}
@@ -1223,6 +1245,7 @@ export default function AdminDashboard() {
                       />
                       <input
                         placeholder="Agência"
+                        data-test-id="input-agency"
                         className="p-2 text-xs border rounded text-zinc-700"
                         value={financialFormData.agency ?? ""}
                         maxLength={5}
@@ -1230,6 +1253,7 @@ export default function AdminDashboard() {
                       />
                       <input
                         placeholder="Dígito Agência"
+                        data-test-id="input-agency-digit"
                         className="p-2 text-xs border rounded text-zinc-700"
                         value={financialFormData.agencyDigit ?? ""}
                         maxLength={1}
@@ -1237,6 +1261,7 @@ export default function AdminDashboard() {
                       />
                       <input
                         placeholder="Nº da Conta"
+                        data-test-id="input-account-number"
                         className="p-2 text-xs border rounded text-zinc-700"
                         value={financialFormData.accountNumber ?? ""}
                         maxLength={9}
@@ -1244,12 +1269,14 @@ export default function AdminDashboard() {
                       />
                       <input
                         placeholder="Dígito Conta"
+                        data-test-id="input-account-digit"
                         className="p-2 text-xs border rounded text-zinc-700"
                         value={financialFormData.accountVerificationDigit ?? ""}
                         maxLength={1}
                         onChange={(e) => setFinancialFormData((p) => ({ ...p, accountVerificationDigit: e.target.value.replace(/[^0-9Xx]/g, "").toUpperCase().slice(0, 1) }))}
                       />
                       <select
+                        data-test-id="select-account-type"
                         className="col-span-2 p-2 text-xs border rounded bg-white text-zinc-700"
                         value={financialFormData.accountType ?? ""}
                         onChange={(e) => setFinancialFormData((p) => ({ ...p, accountType: e.target.value as AccountType }))}
@@ -1262,6 +1289,7 @@ export default function AdminDashboard() {
                       </select>
                       <input
                         placeholder="Titular"
+                        data-test-id="input-owner-name"
                         className="col-span-2 p-2 text-xs border rounded text-zinc-700"
                         value={financialFormData.ownerName ?? ""}
                         maxLength={100}
@@ -1269,6 +1297,7 @@ export default function AdminDashboard() {
                       />
                       <input
                         placeholder="CPF / CNPJ do Titular"
+                        data-test-id="input-owner-document"
                         className="col-span-2 p-2 text-xs border rounded text-zinc-700"
                         value={financialFormData.ownerDocument ?? ""}
                         maxLength={14}
@@ -1276,6 +1305,7 @@ export default function AdminDashboard() {
                       />
                       <input
                         placeholder="Chave PIX"
+                        data-test-id="input-pix-key"
                         className="col-span-2 p-2 text-xs border rounded text-zinc-700"
                         value={financialFormData.pixKey ?? ""}
                         maxLength={77}
@@ -1287,6 +1317,7 @@ export default function AdminDashboard() {
                         type="button"
                         onClick={handleSaveFinancialDetails}
                         disabled={savingFinancial}
+                        data-test-id="btn-save-financial"
                         className="flex-1 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 transition"
                       >
                         {savingFinancial ? "Salvando..." : "Salvar"}
@@ -1294,6 +1325,7 @@ export default function AdminDashboard() {
                       <button
                         type="button"
                         onClick={() => setFinancialEditOpen(false)}
+                        data-test-id="btn-cancel-financial-edit"
                         className="px-4 py-2 text-xs font-bold border border-slate-200 text-slate-500 hover:bg-slate-50 rounded-lg transition"
                       >
                         Cancelar
