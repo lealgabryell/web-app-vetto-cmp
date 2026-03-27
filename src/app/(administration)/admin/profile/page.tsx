@@ -174,6 +174,7 @@ export default function ProfilePage() {
         {user.role === "ADMIN" && user.director && (
           <button
             onClick={() => setShowNewUserModal(true)}
+            data-test-id="btn-create-new-profile"
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition"
           >
             <UserPlus size={16} />
@@ -197,6 +198,7 @@ export default function ProfilePage() {
             {!editing ? (
               <button
                 onClick={() => setEditing(true)}
+                data-test-id="btn-edit-profile"
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition"
               >
                 <Pencil size={15} />
@@ -207,6 +209,7 @@ export default function ProfilePage() {
                 <button
                   onClick={handleCancel}
                   disabled={saving}
+                  data-test-id="btn-cancel-edit-profile"
                   className="flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-600 hover:bg-slate-100 text-sm font-medium rounded-lg transition disabled:opacity-50"
                 >
                   <X size={15} />
@@ -215,6 +218,7 @@ export default function ProfilePage() {
                 <button
                   onClick={handleSave}
                   disabled={saving}
+                  data-test-id="btn-save-profile"
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition disabled:opacity-50"
                 >
                   {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
@@ -235,6 +239,7 @@ export default function ProfilePage() {
                     <label className="block text-xs font-medium text-slate-500 mb-1">Nome completo</label>
                     <input
                       type="text"
+                      data-test-id="input-profile-name"
                       className={inputClass}
                       value={form.name ?? ""}
                       onChange={(e) => handleChange("name", e.target.value)}
@@ -245,6 +250,7 @@ export default function ProfilePage() {
                     <label className="block text-xs font-medium text-slate-500 mb-1">E-mail</label>
                     <input
                       type="email"
+                      data-test-id="input-profile-email"
                       className={inputClass}
                       disabled
                       value={user.email}
@@ -256,6 +262,7 @@ export default function ProfilePage() {
                     <label className="block text-xs font-medium text-slate-500 mb-1">CPF</label>
                     <input
                       type="text"
+                      data-test-id="input-profile-cpf"
                       className={inputClass}
                       value={form.cpf ?? ""}
                       onChange={(e) => handleChange("cpf", e.target.value)}
@@ -267,6 +274,7 @@ export default function ProfilePage() {
                     <label className="block text-xs font-medium text-slate-500 mb-1">Data de nascimento</label>
                     <input
                       type="date"
+                      data-test-id="input-profile-birth-date"
                       className={inputClass}
                       value={form.birthDate ?? ""}
                       onChange={(e) => handleChange("birthDate", e.target.value)}
@@ -277,6 +285,7 @@ export default function ProfilePage() {
                     <label className="block text-xs font-medium text-slate-500 mb-1">Telefone</label>
                     <input
                       type="tel"
+                      data-test-id="input-profile-phone"
                       className={inputClass}
                       value={form.phone ?? ""}
                       onChange={(e) => handleChange("phone", e.target.value)}
@@ -296,6 +305,7 @@ export default function ProfilePage() {
                     <label className="block text-xs font-medium text-slate-500 mb-1">Rua</label>
                     <input
                       type="text"
+                      data-test-id="input-profile-street"
                       className={inputClass}
                       value={form.address?.street ?? ""}
                       onChange={(e) => handleAddressChange("street", e.target.value)}
@@ -306,6 +316,7 @@ export default function ProfilePage() {
                     <label className="block text-xs font-medium text-slate-500 mb-1">Número</label>
                     <input
                       type="text"
+                      data-test-id="input-profile-number"
                       className={inputClass}
                       value={form.address?.number ?? ""}
                       onChange={(e) => handleAddressChange("number", e.target.value)}
@@ -316,6 +327,7 @@ export default function ProfilePage() {
                     <label className="block text-xs font-medium text-slate-500 mb-1">Complemento</label>
                     <input
                       type="text"
+                      data-test-id="input-profile-complement"
                       className={inputClass}
                       value={form.address?.complement ?? ""}
                       onChange={(e) => handleAddressChange("complement", e.target.value)}
@@ -326,6 +338,7 @@ export default function ProfilePage() {
                     <label className="block text-xs font-medium text-slate-500 mb-1">Bairro</label>
                     <input
                       type="text"
+                      data-test-id="input-profile-neighborhood"
                       className={inputClass}
                       value={form.address?.neighborhood ?? ""}
                       onChange={(e) => handleAddressChange("neighborhood", e.target.value)}
@@ -336,6 +349,7 @@ export default function ProfilePage() {
                     <label className="block text-xs font-medium text-slate-500 mb-1">CEP</label>
                     <input
                       type="text"
+                      data-test-id="input-profile-zip-code"
                       className={inputClass}
                       value={form.address?.zipCode ?? ""}
                       onChange={(e) => handleAddressChange("zipCode", e.target.value)}
@@ -347,6 +361,7 @@ export default function ProfilePage() {
                     <label className="block text-xs font-medium text-slate-500 mb-1">Cidade</label>
                     <input
                       type="text"
+                      data-test-id="input-profile-city"
                       className={inputClass}
                       value={form.address?.city ?? ""}
                       onChange={(e) => handleAddressChange("city", e.target.value)}
@@ -357,6 +372,7 @@ export default function ProfilePage() {
                     <label className="block text-xs font-medium text-slate-500 mb-1">Estado (UF)</label>
                     <input
                       type="text"
+                      data-test-id="input-profile-state"
                       className={inputClass}
                       value={form.address?.state ?? ""}
                       onChange={(e) => handleAddressChange("state", e.target.value.toUpperCase())}
